@@ -1,0 +1,248 @@
+# canonical-repository: git@r8y.org:rpasay/dotfiles.git
+# description: Ripta Pasay's gitconfig
+# author: Ripta Pasay <rpasay@git.r8y.org>
+# last-modified: 2015-02-05T11:15:15-0800
+# ---
+
+# Stop giving me noob warnings; I know what a non-ff push is, and I know what
+# unstaged changes are. Set these to true for more user-friendly messages.
+[advice]
+    pushNonFastForward = false
+    statusHints = false
+
+# Useful aliases:
+[alias]
+    a = add --all               ; add should include untracked and deleted
+    ae = add --edit             ;   advanced editing of staged hunks
+    ai = add -i                 ;   in interactive mode
+    ap = add -p                 ;   in interactive-patch mode
+    au = add --update           ;   only on tracked files
+    b = branch                  ; branch
+    ba = branch -a              ;   all (remote and local)
+    bac = branch -a --contains  ;     those containing a commit
+    bc = branch --contains      ;   local ones containing a commit
+    bm = branch --merged        ;   other branches merged into current
+    bnm = branch --no-merged    ;   other branches *not* merged into current
+    br = branch -r              ;   remote-only
+    brm = branch -r --merged    ;     that have been merged into current
+    brdd = branch -d            ;   delete, safely
+    brddf = branch -D           ;   delete, forcefully
+    bv = branch -v              ;   and show latest commit on them
+    ci = commit                 ; commit normally
+    cia = commit --amend        ;   amend the last commit
+    cig = commit --allow-empty --signoff
+                                ;   with a goodness mark
+    cl = clone                  ; clone
+    cni = cherry -v             ; cherry (commits-not-in)
+    co = checkout               ; checkout
+    cob = checkout -b           ;   while creating new branch
+    cot = checkout --track      ;   and set up branch tracking
+    cotb = checkout --track -b  ;       while creating new branch
+    count = shortlog -sn --no-merges
+                                ; shortlog summary with commit count (no merges)
+    cp = cherry-pick -x         ; cherry-pick (mnemonic: copy, cp)
+    cra = commit --amend --reset-author
+    dc = diff --cached          ; diff staged changes vs index
+    di = diff                   ;   working tree vs index
+    dis = diff --stat=200,120   ;     but only filenames
+    diw = diff --word-diff      ;   working tree vs index with word-level diffs
+    dt = diff-tree              ; diff two tree-object blobs
+    fb = filter-branch          ; DESTRUCTIVE filtering of branches...
+    fbc = fb --commit-filter    ;   rewrite commit objects
+    fbi = fb --index-filter     ;   rewrite the index
+    fbm = fb --msg-filter       ;   rewrite commit messages
+    fbp = fb --parent-filter    ;   rewrite commit parent SHA1s
+    fbt = fb --tree-filter      ;   rewrite an entire tree
+    fp = format-patch           ; generate mailbox patches
+    fo = fetch origin           ; fetch from origin
+    foco = "!f() { git fetch origin && git checkout $1 && git pull --ff-only; }; f"
+                                ;   ... and checkout and pull (no merges)
+    fpo = fetch --prune origin  ;   and prune deleted branches
+    fu = fetch upstream         ;   for a secondary remote
+    gca = gc --aggressive       ; explicitly run garbage collection and repacking
+    l = log                     ; logs of current branch
+    lc = local-commits          ;   unpushed changes - required git-local-commits
+    ld = log --pretty=oneline --decorate
+                                ;   decorated
+    lg = log --all --graph --decorate --oneline --simplify-by-decoration
+                                ;   decorated graph
+    lh = log --pretty='format:%h %s'
+                                ;   abbreviated non-colored short-hash w/ msg
+    lf = log --pretty=full      ;   w/ author and committer
+    lff = log --pretty=fuller   ;   w/ author, committer, and timestamps
+    lme = !git log --author=$(git config user.email) || exit 0
+                                ;   just mine, and always succeed
+    lnm = log --no-merges       ;   without merge commits
+    lost = fsck --cache --no-reflogs --lost-found --unreachable HEAD
+                                ;   find anything unreachable by any means
+                                ;   (cache, reflogs, refs)
+    ls = ls-files               ; list all files in repository
+    lsd = ls-files              ;   only deleted
+    m = merge --no-ff           ; merge, disallow fast-foward
+    mff = merge --ff-only       ;   only allow fast-forward
+    mis = merge --no-ff -Xignore-space-change
+                                ;   ignore whitespace changes
+    mrns = merge -s recursive -Xignore-space-change
+                                ;   recursively, no space
+    mt = mergetool              ; see [mergetool]
+    n = tag --force _notch HEAD ; notch mark on HEAD
+    nc = log --patch --reverse --topo-order _notch..HEAD
+                                ;   find difference between last notch and HEAD
+    pr = pull --rebase          ; pull, with rebase
+    ps = push                   ; push
+    pso = push origin           ;   to origin
+    pst = push --tags           ;   just tags
+    psu = push -u origin        ;   and set up upstream tracking
+    rb = rebase                 ; rebase
+    rba = rebase --abort        ;   abort
+    rbc = rebase --continue     ;   continue
+    rbi = rebase -i             ;   in interactive mode
+    rbs = rebase --skip         ;   skip change
+    re = remote -v              ; remote destinations
+    rea = remote add            ;   add
+    rli = rev-list              ; rev-list
+    rlo = reflog                ; reflog
+    rmls = deleted-files        ; find deleted files, requires git-deleted-files
+    rpo = remote prune origin   ; prune local branches that are tracking deleted
+                                ;   remote branches
+    rs = reset                  ; reset the tip and index, but not the working tree
+    rsh = reset --hard          ;   reset the tip, index, AND working tree
+    rss = reset --soft          ;   reset the tip
+    rsoh = reset --hard ORIG_HEAD
+                                ;   reset the tip, index, and tree to before a
+                                ;   destructive operation, like a merge
+    rv = revert                 ; revert a commit
+    rvne = revert --no-edit     ;   for sure
+    sa = stash                  ; stash the working tree
+    saa = stash apply           ;   apply stash onto working tree
+    sal = stash list            ;   list stashes
+    sh = show                   ; show a change
+    shc = show --color=always   ;   always with color
+    shs = show --stat           ;   list the files changes
+    sr = symbolic-ref           ; symbolic ref dump
+    srrm = symbolic-ref -d      ;   delete
+    st = status --porcelain     ; status of working tree
+    ss = !git submodule sync && git submodule update --init --recursive
+                                ; submodule sync (recursive)
+    t = tag                     ; tag
+    ta = tag -a                 ;   annotated
+    tme = !git lme --no-merges --stat --name-only --pretty=format:'' | sort -u
+                                ; touchlist: files I have modified
+    ur = update-ref             ; update sym ref safely
+    wc = whatchanged            ; what files changed
+    wcme = !git whatchanged --author=$(git config user.email) || exit 0
+                                ;   by me, and always succeed
+    wn = log -p HEAD@{1}..HEAD@{0}
+                                ; what's new between reflog 1 and 0
+    xb = blame                  ; x-blame
+    xd = describe               ; x-describe branch by closest tag
+
+# Applying a patch should fix whitespace errors (but also output a warning
+# when doing so).
+[apply]
+    whitespace = fix
+
+# "cot" and "cotb" are probably useless now, because autosetupmerge will take
+# care of tracking branches automatically. While this is the default in newer
+# git, this is here to emulate the behavior in older ones.
+[branch]
+    autosetupmerge = true
+
+# Color output whenever possible with special colors to make it look nice
+# against the "solarized" color scheme.
+[color]
+    branch = auto
+    diff = auto
+    status = auto
+    ui = auto
+[color "branch"]
+    current = green reverse
+    local = green
+    remote = yellow
+[color "diff"]
+    meta = yellow bold
+    frag = magenta bold
+    old = red bold
+    new = green bold
+[color "status"]
+    added = yellow
+    changed = green
+    untracked = cyan
+
+# Set the darn editor and pager, which unfortunately don't always get picked
+# up in some versions of git.
+[core]
+    editor = vim
+    excludesfile = ~/.gitignore
+    pager = $PAGER -FX
+    preloadindex = true
+
+# Diffing settings galore.
+[diff]
+    mnemonicprefix = true       ; diffs should show location instead of generic
+                                ; a, b filenames
+    renames = copies            ; renames should be treated as copies
+    # tool = Kaleidoscope.app     ; Kaleidoscope is the shizz (but Mac-only)
+    wordRegex = [^[:space:]]    ; a word is any non-space (unicode?)
+[difftool]
+    prompt = true               ; always ask by default
+[difftool "Kaleidoscope.app"]
+    cmd = ksdiff-wrapper git \"$LOCAL\" \"$REMOTE\"
+
+# Matchy-matchy with my prompt.
+[format]
+    pretty = format:%Cgreen%h %Cblue%ae %Creset%s
+
+# GitHub settings
+[github]
+    user = ripta
+
+# Don't automatically garbage collect, because it will sometimes block
+# large operations for a long time. Run "git gc" to manually clean up.
+[gc]
+    auto = 0
+
+# Merge settings and tools.
+[merge]
+    conflictstyle = diff3
+    stat = true                 ; always show a diffstat after a merge
+    tool = vimdiff
+[mergetool]
+    keepBackup = false
+[mergetool "splice"]
+    cmd = "vim -f $BASE $LOCAL $REMOTE $MERGED -c 'SpliceInit'"
+    trustExitCode = true
+
+# By default, push a branch to its tracked upstream, and nothing more.
+[push]
+    default = tracking
+
+# Prefer smaller packed objects, even if it means no love for git before 1.4.4.
+# Also no love for: http and rsync repositories.
+[repack]
+    usedeltabaseoffset = true
+
+# Enable rerere (reuse recorded conflict resolution), so that when git sees
+# the same conflict in the future, it already knows how to fix it.
+[rerere]
+    enabled = 1
+
+# Useful URL aliases.
+[url "git@github.com:"]
+    insteadOf = gh:
+[url "git://gist.github.com/"]
+    insteadOf = gist:
+[url "ssh://gitolite@githost.rent.com/"]
+    insteadOf = rent:
+[url "git@git.r8y.org:"]
+    insteadOf = r8y:
+
+# Who? Me.
+[user]
+    name = Ripta Pasay
+    email = github@r8y.org
+
+[filter "hawser"]
+	clean = git hawser clean %f
+	smudge = git hawser smudge %f
+	required = true
