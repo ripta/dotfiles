@@ -25,3 +25,6 @@
 [submodule "vim/bundle/sparkup"]
 	path = vim/bundle/sparkup
 	url = https://github.com/rstacruz/sparkup.git
+[submodule "vim/bundle/unite.vim"]
+	path = vim/bundle/unite.vim
+	url = https://github.com/Shougo/unite.vim.git
