@@ -72,6 +72,7 @@ export PATH=$GOPATH/bin:$PATH
 
 # Amazon AWS
 if [[ -f /usr/libexec/java_home ]]
+then
     export JAVA_HOME="$(/usr/libexec/java_home)"
 fi
 export EC2_HOME="/usr/local/Cellar/ec2-api-tools/1.6.13.0/libexec"
