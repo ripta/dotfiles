@@ -58,7 +58,10 @@ export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH
 unsetopt correct_all
 unsetopt correct
 
-source ~/perl5/perlbrew/etc/bashrc
+if [[ -f ~/perl5/perlbrew/etc/bashrc ]]
+then
+    source ~/perl5/perlbrew/etc/bashrc
+fi
 
 # Add RVM to PATH for scripting
 export PATH=$HOME/.rvm/bin:$PATH
@@ -69,7 +72,9 @@ export GOROOT=`go env GOROOT`
 export PATH=$GOPATH/bin:$PATH
 
 # Amazon AWS
-export JAVA_HOME="$(/usr/libexec/java_home)"
+if [[ -f /usr/libexec/java_home ]]
+    export JAVA_HOME="$(/usr/libexec/java_home)"
+fi
 export AWS_ACCESS_KEY="AKIAJM4IECR3FZL5HLRQ"
 export AWS_SECRET_KEY="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"
 export EC2_HOME="/usr/local/Cellar/ec2-api-tools/1.6.13.0/libexec"
