@@ -1,0 +1,61 @@
+#compdef fleetctl
+# ------------------------------------------------------------------------------
+# Description
+# -----------
+#
+#  Completion script for fleetctl (http://github.com/coreos/fleet).
+#
+# ------------------------------------------------------------------------------
+# Authors
+# -------
+#
+#  * Timo Derstappen (https://github.com/teemow)
+#
+# ------------------------------------------------------------------------------
+
+
+local curcontext="$curcontext" state line _opts ret=1
+
+_arguments -C -A "-v" -A "--version" \
+  '(- 1 *)'{-v,--version}'[display version information]' \
+  '1: :->cmds' \
+  '*:: :->args' && ret=0
+
+case $state in
+  cmds)
+    _values "fleetctl command" \
+      "cat[Output the contents of a submitted unit]" \
+      "destroy[Destroy one or more units in the cluster]" \
+      "help[Show a list of commands or help for one command]" \
+      "journal[Print the journal of a unit in the cluster to stdout]" \
+      "list-machines[Enumerate the current hosts in the cluster]" \
+      "list-units[Enumerate units loaded in the cluster]" \
+      "load[Schedule one or more units in the cluster, first submitting them if necessary]" \
+      "ssh[Open interactive shell on a machine in the cluster]" \
+      "start[Instruct systemd to start one or more units in the cluster, first submitting and loading if necessary]" \
+      "status[Output the status of one or more units in the cluster]" \
+      "stop[Instruct systemd to stop one or more units in the cluster]" \
+      "submit[Upload one or more units to the cluster without starting them]" \
+      "unload[Unschedule one or more units in the cluster]" \
+      "verify[Verify unit file signatures using local SSH identities]" \
+      "version[Print the version and exit]"
+    ret=0
+    ;;
+  args)
+    case $line[1] in
+      help)
+        _values 'commands' 'cat' 'destroy' 'journal' 'list-machines' 'list-units' 'load' 'ssh' 'start' 'status' 'stop' 'submit' 'unload' 'verify' 'version' && ret=0
+        ;;
+      stop)
+        _arguments \
+          '(--block-attempts)--block-attempts=-[Wait until the jobs are stopped, performing up to N attempts before giving up. A value of 0 indicates no limit]'
+        ret=0
+        ;;
+      exec)
+        _normal && ret=0
+        ;;
+    esac
+    ;;
+esac
+
+return ret
