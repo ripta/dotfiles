@@ -47,6 +47,9 @@ HISTSIZE=15000
 # Example format: plugins=(rails git textmate ruby lighthouse)
 plugins=(encode64 fleetctl jsontools redis-cli rpasay-git sprunge ssh-agent rvm bundler brew)
 
+zstyle :omz:plugins:ssh-agent agent-forwarding on
+zstyle :omz:plugins:ssh-agent identities id_rsa id_rsa_2015 google_compute_engine
+
 source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
@@ -128,4 +131,6 @@ then
 fi
 
 export PATH=./node_modules/.bin:.bundle/binstubs:$PATH
+
+export FLEETCTL_ENDPOINT=http://node-03.in.dc1.between.zone:4001
 
