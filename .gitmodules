@@ -4,3 +4,6 @@
 [submodule "vim/bundle/neobundle.vim"]
 	path = vim/bundle/neobundle.vim
 	url = https://github.com/Shougo/neobundle.vim
+[submodule "vim/bundle/FuzzyFinder"]
+	path = vim/bundle/FuzzyFinder
+	url = https://github.com/vim-scripts/FuzzyFinder.git
