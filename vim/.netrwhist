@@ -1,0 +1,11 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =9
+let g:netrw_dirhist_1='/Users/rpasay/Projects/analytics/sitespeed/build'
+let g:netrw_dirhist_2='/Users/rpasay/Projects/gitolite-admin/conf'
+let g:netrw_dirhist_3='/Users/rpasay/Projects/analytics/sitespeed/build'
+let g:netrw_dirhist_4='/Users/rpasay/Projects/dashboard-prototype/html/assets/javascript'
+let g:netrw_dirhist_5='/Users/rpasay/Projects/rent/lib/Company/Obj/Applications/Renter'
+let g:netrw_dirhist_6='/Users/rpasay/Projects/cubetastic/.git'
+let g:netrw_dirhist_7='/Users/rpasay/source/rent/config/deploy'
+let g:netrw_dirhist_8='/Users/rpasay/.ghc'
+let g:netrw_dirhist_9='/Users/rpasay/.modules'
