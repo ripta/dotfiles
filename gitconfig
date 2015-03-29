@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2015-02-05T11:15:15-0800
+# last-modified: 2015-03-28T19:48:24-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -119,6 +119,7 @@
     sh = show                   ; show a change
     shc = show --color=always   ;   always with color
     shs = show --stat           ;   list the files changes
+    sma = submodule add         ; submodule add
     sr = symbolic-ref           ; symbolic ref dump
     srrm = symbolic-ref -d      ;   delete
     st = status --porcelain     ; status of working tree
