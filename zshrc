@@ -73,6 +73,7 @@ export PATH=$GOPATH/bin:$PATH
 
 # Amazon AWS
 if [[ -f /usr/libexec/java_home ]]
+then
     export JAVA_HOME="$(/usr/libexec/java_home)"
 fi
 export AWS_ACCESS_KEY="AKIAJM4IECR3FZL5HLRQ"
