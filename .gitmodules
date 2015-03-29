@@ -22,3 +22,6 @@
 [submodule "vim/bundle/nginx.vim"]
 	path = vim/bundle/nginx.vim
 	url = https://github.com/vim-scripts/nginx.vim.git
+[submodule "vim/bundle/sparkup"]
+	path = vim/bundle/sparkup
+	url = https://github.com/rstacruz/sparkup.git
