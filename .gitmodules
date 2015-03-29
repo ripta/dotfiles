@@ -34,3 +34,6 @@
 [submodule "vim/bundle/vim-bufferline"]
 	path = vim/bundle/vim-bufferline
 	url = https://github.com/bling/vim-bufferline.git
+[submodule "vim/bundle/vim-coffee-script"]
+	path = vim/bundle/vim-coffee-script
+	url = https://github.com/kchmck/vim-coffee-script.git
