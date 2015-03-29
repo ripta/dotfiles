@@ -132,5 +132,6 @@ fi
 
 export PATH=./node_modules/.bin:.bundle/binstubs:$PATH
 
+export ETCDCTL_PEERS=http://node-03.in.dc1.between.zone:4001
 export FLEETCTL_ENDPOINT=http://node-03.in.dc1.between.zone:4001
 
