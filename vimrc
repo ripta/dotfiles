@@ -46,6 +46,7 @@ NeoBundle 'vim-scripts/VimClojure'
 NeoBundle 'vim-scripts/YankRing.vim'
 NeoBundle 'jnwhiteh/vim-golang'
 NeoBundle 'derekwyatt/vim-scala'
+NeoBundle 'elzr/vim-json'
 
 call neobundle#end()
 
