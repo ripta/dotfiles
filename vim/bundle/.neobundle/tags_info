@@ -1,3 +1,4 @@
+Dockerfile.vim
 FuzzyFinder
 L9
 VimClojure
@@ -15,6 +16,7 @@ vim-coffee-script
 vim-colors-solarized
 vim-fugitive
 vim-golang
+vim-json
 vim-less
 vim-markdown
 vim-scala
