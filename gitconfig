@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2015-03-28T19:48:24-0700
+# last-modified: 2015-04-15T14:59:12-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -174,7 +174,7 @@
 # up in some versions of git.
 [core]
     editor = vim
-    excludesfile = ~/.gitignore
+    excludesfile = /Users/rpasay/.gitignore_global
     pager = $PAGER -FX
     preloadindex = true
 
@@ -247,3 +247,9 @@
 	clean = git hawser clean %f
 	smudge = git hawser smudge %f
 	required = true
+[difftool "sourcetree"]
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
+[mergetool "sourcetree"]
+	cmd = /opt/homebrew-cask/Caskroom/sourcetree/2.0.5.2/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
