@@ -116,8 +116,8 @@ vnoremap <F1> <ESC>
 nnoremap <leader>l :ls<cr>
 nnoremap <leader>j gqip
 nnoremap <leader>s <C-w>v<C-w>l
-nnoremap <leader>a :Ack<cr>
-nnoremap <leader>q :qall<cr>
+nnoremap <leader>a :wa<cr>
+nnoremap <leader>q :qa<cr>
 nnoremap <leader>w :w<cr>
 nnoremap <leader>m :!make<cr>
 
