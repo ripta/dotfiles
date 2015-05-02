@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2015-04-15T14:59:12-0700
+# last-modified: 2015-05-03T17:37:27-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -21,13 +21,15 @@
     ba = branch -a              ;   all (remote and local)
     bac = branch -a --contains  ;     those containing a commit
     bc = branch --contains      ;   local ones containing a commit
+    bd = branch -d              ;   delete, safely
+    bdf = branch -D             ;   delete, forcefully
     bm = branch --merged        ;   other branches merged into current
     bnm = branch --no-merged    ;   other branches *not* merged into current
     br = branch -r              ;   remote-only
+    brd = branch -r -d          ;     delete
     brm = branch -r --merged    ;     that have been merged into current
-    brdd = branch -d            ;   delete, safely
-    brddf = branch -D           ;   delete, forcefully
     bv = branch -v              ;   and show latest commit on them
+    cfd = clean -fd             ; cleanup any stray files
     ci = commit                 ; commit normally
     cia = commit --amend        ;   amend the last commit
     cig = commit --allow-empty --signoff
@@ -116,6 +118,7 @@
     sa = stash                  ; stash the working tree
     saa = stash apply           ;   apply stash onto working tree
     sal = stash list            ;   list stashes
+    sap = stash pop             ;   pop goes the stash
     sh = show                   ; show a change
     shc = show --color=always   ;   always with color
     shs = show --stat           ;   list the files changes
