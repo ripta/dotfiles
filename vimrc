@@ -120,6 +120,7 @@ nnoremap <leader>a :wa<cr>
 nnoremap <leader>q :qa<cr>
 nnoremap <leader>w :w<cr>
 nnoremap <leader>m :!make<cr>
+nnoremap <leader>t :wa <bar> :!clear && rake test <cr>
 
 nnoremap <C-h> <C-w>h
 nnoremap <C-j> <C-w>j
