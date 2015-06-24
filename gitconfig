@@ -92,9 +92,11 @@
                                 ;   find difference between last notch and HEAD
     pr = pull --rebase          ; pull, with rebase
     ps = push                   ; push
+    psf = push -f               ;   force
     pso = push origin           ;   to origin
     pst = push --tags           ;   just tags
     psu = push -u origin        ;   and set up upstream tracking
+    r = rev-parse --show-toplevel ; root of git repo
     rb = rebase                 ; rebase
     rba = rebase --abort        ;   abort
     rbc = rebase --continue     ;   continue
@@ -105,6 +107,7 @@
     rli = rev-list              ; rev-list
     rlo = reflog                ; reflog
     rmls = deleted-files        ; find deleted files, requires git-deleted-files
+    rp = rev-parse
     rpo = remote prune origin   ; prune local branches that are tracking deleted
                                 ;   remote branches
     rs = reset                  ; reset the tip and index, but not the working tree
