@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2015-05-03T17:37:27-0700
+# last-modified: 2015-06-22T17:59:16-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -50,11 +50,11 @@
     diw = diff --word-diff      ;   working tree vs index with word-level diffs
     dt = diff-tree              ; diff two tree-object blobs
     fb = filter-branch          ; DESTRUCTIVE filtering of branches...
-    fbc = fb --commit-filter    ;   rewrite commit objects
-    fbi = fb --index-filter     ;   rewrite the index
-    fbm = fb --msg-filter       ;   rewrite commit messages
-    fbp = fb --parent-filter    ;   rewrite commit parent SHA1s
-    fbt = fb --tree-filter      ;   rewrite an entire tree
+    fbc = filter-branch --commit-filter    ;   rewrite commit objects
+    fbi = filter-branch --index-filter     ;   rewrite the index
+    fbm = filter-branch --msg-filter       ;   rewrite commit messages
+    fbp = filter-branch --parent-filter    ;   rewrite commit parent SHA1s
+    fbt = filter-branch --tree-filter      ;   rewrite an entire tree
     fp = format-patch           ; generate mailbox patches
     fo = fetch origin           ; fetch from origin
     foco = "!f() { git fetch origin && git checkout $1 && git pull --ff-only; }; f"
