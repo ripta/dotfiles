@@ -122,3 +122,16 @@ export PATH=./node_modules/.bin:.bundle/binstubs:$PATH
 export ETCDCTL_PEERS=http://node-03.in.dc1.between.zone:4001
 export FLEETCTL_ENDPOINT=http://node-03.in.dc1.between.zone:4001
 
+# PyEnv
+export PYENV_ROOT=~/.pyenv
+if which pyenv > /dev/null
+then
+    eval "$(pyenv init -)"
+fi
+
+if which pyenv-virtualenv-init > /dev/null
+then
+    eval "$(pyenv virtualenv-init -)"
+fi
+
+
