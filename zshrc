@@ -78,6 +78,7 @@ alias a='ack'
 alias aa='ack -a'
 alias ap='ack --perl'
 alias c='csvfix'
+alias e='emacs-24.5'
 alias g='git'
 alias gc='gcloud compute'
 alias gopath="cd $GOPATH"
@@ -86,16 +87,17 @@ alias j="$WEBROOT/extern/jira-cli"
 alias rake='noglob rake'
 alias sdr='screen -dr'
 alias sls='screen -ls'
+alias st3='open -a "/Applications/Sublime Text.app"'
 alias wr='cd $WEBROOT'
 alias wrp='source ~/env/push ; cd $WEBROOT ; echo READY FOR PUSH'
 alias v='vi'
 alias zs='source ~/.zshrc'
 
 # Google Cloud SDK
-if [[ -d ~/Projects/google-cloud-sdk ]]
+if [[ -d ~/bin/google-cloud-sdk ]]
 then
-    source ~/Projects/google-cloud-sdk/path.zsh.inc
-    source ~/Projects/google-cloud-sdk/completion.zsh.inc
+    source ~/bin/google-cloud-sdk/path.zsh.inc
+    source ~/bin/google-cloud-sdk/completion.zsh.inc
 fi
 
 # chruby
@@ -103,7 +105,11 @@ if [[ -d /usr/local/opt/chruby ]]
 then
     source /usr/local/opt/chruby/share/chruby/chruby.sh
     source /usr/local/opt/chruby/share/chruby/auto.sh
-    RUBIES=(~/.rvm/rubies/*)
+
+    if [[ -d ~/.rvm ]]
+    then
+        RUBIES+=(~/.rvm/rubies/*)
+    fi
 
     chruby 2.1
 fi
