@@ -127,6 +127,8 @@ nnoremap <C-j> <C-w>j
 nnoremap <C-k> <C-w>k
 nnoremap <C-l> <C-w>l
 
+xnoremap . :normal .<CR>
+
 au syntax mason so /usr/share/vim/vim73/syntax/mason.vim
 au BufNewFile,BufRead *.html set ft=mason
 au BufNewFile,BufRead autohandler set ft=mason
