@@ -66,9 +66,6 @@ then
     source ~/perl5/perlbrew/etc/bashrc
 fi
 
-# Add RVM to PATH for scripting
-export PATH=$HOME/.rvm/bin:$PATH
-
 # Add GOPATH for golang
 export GOPATH=/Users/rpasay/Projects/gocode
 export GOROOT=`go env GOROOT`
@@ -101,20 +98,6 @@ if [[ -d ~/bin/google-cloud-sdk ]]
 then
     source ~/bin/google-cloud-sdk/path.zsh.inc
     source ~/bin/google-cloud-sdk/completion.zsh.inc
-fi
-
-# chruby
-if [[ -d /usr/local/opt/chruby ]]
-then
-    source /usr/local/opt/chruby/share/chruby/chruby.sh
-    source /usr/local/opt/chruby/share/chruby/auto.sh
-
-    if [[ -d ~/.rvm ]]
-    then
-        RUBIES+=(~/.rvm/rubies/*)
-    fi
-
-    chruby 2.1
 fi
 
 export PATH=/usr/local/sbin:$PATH
@@ -150,4 +133,20 @@ then
     eval "$(pyenv virtualenv-init -)"
 fi
 
+# Add RVM to PATH for scripting
+export PATH=$HOME/.rvm/bin:$PATH
+
+# chruby
+if [[ -d /usr/local/opt/chruby ]]
+then
+    source /usr/local/opt/chruby/share/chruby/chruby.sh
+    source /usr/local/opt/chruby/share/chruby/auto.sh
+
+    if [[ -d ~/.rvm ]]
+    then
+        RUBIES+=(~/.rvm/rubies/*)
+    fi
+
+    chruby 2.1
+fi
 
