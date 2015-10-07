@@ -119,6 +119,13 @@ fi
 
 export PATH=/usr/local/sbin:$PATH
 
+# Node Version Manager workspace
+if [[ -d ~/.nvm ]]
+then
+    export NVM_DIR=~/.nvm
+    source $(brew --prefix nvm)/nvm.sh
+fi
+
 # RentPath, Inc. workspace
 if [[ -d ~/source ]]
 then
