@@ -133,10 +133,9 @@ then
     eval "$(pyenv virtualenv-init -)"
 fi
 
-# Add RVM to PATH for scripting
+# chruby+rvm mumbo-jumbo
+# NOTE(rpasay): rvm complains if it doesn't appear first in PATH; srsly
 export PATH=$HOME/.rvm/bin:$PATH
-
-# chruby
 if [[ -d /usr/local/opt/chruby ]]
 then
     source /usr/local/opt/chruby/share/chruby/chruby.sh
