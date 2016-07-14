@@ -67,9 +67,12 @@ then
 fi
 
 # Add GOPATH for golang
-export GOPATH=/Users/rpasay/Projects/gocode
-export GOROOT=`go env GOROOT`
-export PATH=$GOPATH/bin:$PATH
+if which go > /dev/null
+then
+    export GOPATH=/Users/rpasay/Projects/gocode
+    export GOROOT=`go env GOROOT`
+    export PATH=$GOPATH/bin:$PATH
+fi
 
 alias a='ack'
 alias aa='ack -a'
