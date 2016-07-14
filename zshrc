@@ -153,3 +153,8 @@ then
     chruby 2.1
 fi
 
+# ZipRecruiter
+export LOCAL_SANDBOX_USERNAME=ripta
+export STARTERVIEW=~/ziprecruiter
+
+
