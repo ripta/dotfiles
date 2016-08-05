@@ -35,6 +35,8 @@
     cig = commit --allow-empty --signoff
                                 ;   with a goodness mark
     cl = clone                  ; clone
+    cmp = "!f() { git log $1..$2; }; f"
+                                ; compare two refs
     cni = cherry -v             ; cherry (commits-not-in)
     co = checkout               ; checkout
     cob = checkout -b           ;   while creating new branch
@@ -49,6 +51,7 @@
     dis = diff --stat=200,120   ;     but only filenames
     diw = diff --word-diff      ;   working tree vs index with word-level diffs
     dt = diff-tree              ; diff two tree-object blobs
+    dw = diff --word-diff       ; word-wise diff
     fb = filter-branch          ; DESTRUCTIVE filtering of branches...
     fbc = filter-branch --commit-filter    ;   rewrite commit objects
     fbi = filter-branch --index-filter     ;   rewrite the index
@@ -92,7 +95,7 @@
                                 ;   find difference between last notch and HEAD
     pr = pull --rebase          ; pull, with rebase
     ps = push                   ; push
-    psf = push -f               ;   force
+    psf = push --force-with-lease ;   force
     pso = push origin           ;   to origin
     pst = push --tags           ;   just tags
     psu = push -u origin        ;   and set up upstream tracking
