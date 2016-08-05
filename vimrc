@@ -49,6 +49,9 @@ NeoBundle 'derekwyatt/vim-scala'
 NeoBundle 'elzr/vim-json'
 NeoBundle 'ekalinin/Dockerfile.vim'
 
+NeoBundle 'Glench/Vim-Jinja2-Syntax'
+NeoBundle 'saltstack/salt-vim'
+
 call neobundle#end()
 
 filetype plugin indent on
