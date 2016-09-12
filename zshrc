@@ -114,7 +114,7 @@ export PATH=/usr/local/sbin:$PATH
 if [[ -d ~/.nvm ]]
 then
     export NVM_DIR=~/.nvm
-    source $(brew --prefix nvm)/nvm.sh
+    source $NVM_DIR/nvm.sh
 fi
 
 # RentPath, Inc. workspace
