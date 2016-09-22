@@ -132,6 +132,11 @@ nnoremap <C-l> <C-w>l
 
 xnoremap . :normal .<CR>
 
+augroup vimrc
+    au BufReadPre * setlocal foldmethod=indent
+    au BufWinEnter * if &fdm == 'indent' | setlocal foldmethod=manual | endif
+augroup END
+
 au syntax mason so /usr/share/vim/vim73/syntax/mason.vim
 au BufNewFile,BufRead *.html set ft=mason
 au BufNewFile,BufRead autohandler set ft=mason
@@ -169,6 +174,7 @@ func! s:AdjustTT2Type()
     endif
 endfunc
 
+" au BufNewFile,BufReadPre * setlocal foldmethod=syntax
 au BufNewFile,BufRead *.confluence setf confluence
 au FileType ruby setlocal shiftwidth=2 tabstop=2 softtabstop=2 shiftwidth=2
 
