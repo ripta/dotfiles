@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2016-09-25T03:54:11-0700
+# last-modified: 2016-09-25T03:55:36-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -191,6 +191,7 @@
 
 # Diffing settings galore.
 [diff]
+    algorithm = patience
     mnemonicprefix = true       ; diffs should show location instead of generic
                                 ; a, b filenames
     renames = copies            ; renames should be treated as copies
