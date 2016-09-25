@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2016-09-25T03:47:55-0700
+# last-modified: 2016-09-25T03:54:11-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -185,7 +185,7 @@
 # up in some versions of git.
 [core]
     editor = vim
-    excludesfile = /Users/rpasay/.gitignore_global
+    excludesfile = ~/.dotfiles/gitignore
     pager = $PAGER -FX
     preloadindex = true
 
