@@ -13,5 +13,8 @@ then
         export PATH=$HOME/.rvm/bin:$PATH
     fi
 
-    chruby 2.1
+    if [[ -n "$CHRUBY_RUBY_VERSION" ]]
+    then
+        chruby $CHRUBY_RUBY_VERSION
+    fi
 fi
