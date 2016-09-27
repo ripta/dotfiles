@@ -12,7 +12,7 @@ DISABLE_AUTO_UPDATE="true"
 # export UPDATE_ZSH_DAYS=13
 # DISABLE_LS_COLORS="true"
 # DISABLE_AUTO_TITLE="true"
-DISABLE_CORRECTION="true"
+ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
 
 DEFAULT_USER='rpasay'
@@ -42,12 +42,7 @@ then
 fi
 
 source $ZSH/oh-my-zsh.sh
-
 export PATH=/usr/local/sbin:$PATH
-
-# Goodness, that's annoying.
-unsetopt correct_all
-unsetopt correct
 
 if [[ -r "$HOME/.zshpostrc" ]]
 then
