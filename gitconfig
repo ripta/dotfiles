@@ -1,13 +1,16 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2016-09-27T11:28:42-0700
+# last-modified: 2016-10-04T23:29:53-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
 # unstaged changes are. Set these to true for more user-friendly messages.
 [advice]
+    commitBeforeMerge = false
+    detachedHead = false
     pushNonFastForward = false
+    resolveConflict = false
     statusHints = false
 
 # Useful aliases:
