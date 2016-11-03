@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2016-10-04T23:29:53-0700
+# last-modified: 2016-11-03T11:07:34-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -98,7 +98,7 @@
     nc = log --patch --reverse --topo-order _notch..HEAD
                                 ;   find difference between last notch and HEAD
     pr = pull --rebase          ; pull, with rebase
-    ps = push                   ; push
+    ps = push -q                ; push
     psf = push --force-with-lease ;   force
     pso = push origin           ;   to origin
     pst = push --tags           ;   just tags
