@@ -278,3 +278,5 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	required = true
+[url "git@git.ziprecruiter.com:"]
+	insteadOf = https://git.ziprecruiter.com/
