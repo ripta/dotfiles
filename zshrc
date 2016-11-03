@@ -22,7 +22,7 @@ HISTSIZE=15000
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(docker encode64 fleetctl jsontools redis-cli rpasay-git sprunge ssh-agent rvm bundler brew aws)
+plugins=(docker encode64 fleetctl gpg-agent jsontools redis-cli rpasay-git sprunge ssh-agent rvm bundler brew aws)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
 zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa id_rsa_2015 google_compute_engine
