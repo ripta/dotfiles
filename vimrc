@@ -33,7 +33,7 @@ NeoBundle 'FuzzyFinder'
 
 "NeoBundle 'rails.vim'
 
-NeoBundle 'git://git.wincent.com/command-t.git'
+NeoBundle 'https://git.wincent.com/command-t.git'
 
 NeoBundle 'bling/vim-airline'
 NeoBundle 'bling/vim-bufferline'
