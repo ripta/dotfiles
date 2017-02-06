@@ -146,7 +146,7 @@ au BufNewFile,BufRead Thorfile set ft=ruby
 "autocmd vimenter * NERDTree
 "autocmd vimenter * if !argc() | NERDTree | endif
 
-let g:ackprg="ack-grep -H --nocolor --nogroup --column"
+"let g:ackprg="ack-grep -H --nocolor --nogroup --column"
 let g:vim_markdown_folding_disabled=1
 
 let g:airline_powerline_fonts = 1
