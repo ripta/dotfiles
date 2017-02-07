@@ -9,5 +9,5 @@ then
     git submodule update
 fi
 
-RCRC=~/.dotfiles/rcrc PATH=/home/ripta/.dotfiles/bin:$PATH rcup -v
+RCRC=~/.dotfiles/rcrc PATH=/home/ripta/.dotfiles/bin:$PATH rcup -v -f
 
