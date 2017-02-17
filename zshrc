@@ -16,7 +16,7 @@ ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
 
 DEFAULT_USER='rpasay'
-HISTSIZE=15000
+HISTSIZE=100000
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
