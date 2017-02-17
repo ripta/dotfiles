@@ -65,7 +65,7 @@ syntax on
 set background=dark
 colorscheme solarized
 
-set ts=4 sw=4 sts=4 et ai vb
+set ts=2 sw=2 sts=2 et ai vb
 set bs=indent,eol,start
 set enc=utf-8
 set hidden
