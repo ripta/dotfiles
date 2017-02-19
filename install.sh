@@ -7,6 +7,9 @@ then
     cd ~/.dotfiles
     git submodule init
     git submodule update
+else
+    cd ~/.dotfiles
+    git pull --rebase
 fi
 
 RCRC=~/.dotfiles/rcrc PATH=/home/ripta/.dotfiles/bin:$PATH rcup -v -f
