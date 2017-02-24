@@ -1,5 +1,8 @@
 # ZipRecruiter
-if [ -d "$HOME/ziprecruiter" ]
+if [ -d "/vol/$USER/ziprecruiter" ]
+then
+  export STARTERVIEW="/vol/$USER/ziprecruiter"
+elif [ -d "$HOME/ziprecruiter" ]
 then
   export STARTERVIEW="$HOME/ziprecruiter"
 elif [ -d "/var/starterview" ]
