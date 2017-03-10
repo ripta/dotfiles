@@ -54,6 +54,7 @@ source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
 export AUTOBOT_ENV=development
+export EDITOR=vim
 export PATH=$PATH:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/games
 export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH
 
