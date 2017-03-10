@@ -1,2 +1,2 @@
-EXCLUDES="README.md bin modules schemes setup share zsh-custom"
-SYMLINK_DIRS='modules vim'
+EXCLUDES="README.md bin modules schemes setup share vim zsh-custom"
+SYMLINK_DIRS=''
