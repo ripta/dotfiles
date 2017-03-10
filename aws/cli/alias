@@ -1,0 +1,16 @@
+[toplevel]
+
+# aws find-by-name www1
+find-by-name = !f() {
+    aws ec2 describe-instances \
+        --filter "Name=tag:Name,Values=$1" \
+        --query 'Reservations[0].Instances[*].{
+            InstanceId: InstanceId,
+            PublicIpAddress: PublicIpAddress,
+            PrivateIpAddress: PrivateIpAddress,
+            State: State.Name,
+            Name: Tags[?Key==`Name`].Value|[0],
+            Tier: Tags[?Key==`Tier`].Value|[0],
+            Level: Tags[?Key==`Level`].Value|[0]
+        }'
+  }; f
