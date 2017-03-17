@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2017-02-05T17:39:17-0800
+# last-modified: 2017-03-17T11:54:09-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -86,7 +86,7 @@
                                 ;   (cache, reflogs, refs)
     lp = log --patch            ;   generate patch
     ls = ls-files               ; list all files in repository
-    lsd = ls-files              ;   only deleted
+    lsd = ls-files --deleted    ;   only deleted
     m = merge --no-ff           ; merge, disallow fast-foward
     mff = merge --ff-only       ;   only allow fast-forward
     mis = merge --no-ff -Xignore-space-change
