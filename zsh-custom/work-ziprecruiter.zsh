@@ -33,4 +33,7 @@ if [ -d "$INFRAWD/bin" ]
 then
   export INFRAWD
   export PATH="$INFRAWD/bin:$PATH"
+
+  alias ztf='zr-terraform'
 fi
+
