@@ -3,14 +3,29 @@
 # aws find-by-name www1
 find-by-name = !f() {
     aws ec2 describe-instances \
+        --output json \
         --filter "Name=tag:Name,Values=$1" \
-        --query 'Reservations[0].Instances[*].{
+        --query 'Reservations[0].Instances[0].{
             InstanceId: InstanceId,
             PublicIpAddress: PublicIpAddress,
             PrivateIpAddress: PrivateIpAddress,
             State: State.Name,
+            StateReason: StateReason.Message,
             Name: Tags[?Key==`Name`].Value|[0],
             Tier: Tags[?Key==`Tier`].Value|[0],
             Level: Tags[?Key==`Level`].Value|[0]
         }'
+  }; f
+
+start-instance = !f() {
+    INSTANCE=$(aws find-by-name $1)
+    IID=$(echo "$INSTANCE" | jq -r .InstanceId)
+    ISTATE=$(echo "$INSTANCE" | jq -r .State)
+    [ -z "$IID" ] && exit 1
+    [ "$ISTATE" != "stopped" ] && echo "Instance $IID is already $ISTATE" && exit
+    echo "Instance $IID currently $ISTATE"
+    echo "Starting..."
+    aws ec2 start-instances --instance-ids "$IID"
+    echo "Waiting for $IID to start..."
+    aws ec2 wait instance-running --instance-ids "$IID"
   }; f
