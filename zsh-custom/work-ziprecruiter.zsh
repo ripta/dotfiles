@@ -18,8 +18,6 @@ fi
 
 if [ -d "$STARTERVIEW" -o -f "/etc/ziprecruiter.yml" ]
 then
-  echo "Welcome to ZipRecruiter!"
-  echo "STARTERVIEW=$STARTERVIEW"
   alias gozr="cd $STARTERVIEW"
 else
   return
