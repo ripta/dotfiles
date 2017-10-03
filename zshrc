@@ -18,6 +18,7 @@ COMPLETION_WAITING_DOTS="true"
 DEFAULT_USER='rpasay'
 HISTSIZE=100000
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
+HOMEBREW_NO_AUTO_UPDATE=1
 
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
