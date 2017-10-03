@@ -12,5 +12,7 @@ then
     export PATH=$GOPATH/bin:$PATH
 
     alias gopath="cd $GOPATH"
-    alias gowd="cd $GOPATH/src/github.com/ripta"
+    gowd() {
+      cd $GOPATH/src/${1:-github.com/ripta}
+    }
 fi
