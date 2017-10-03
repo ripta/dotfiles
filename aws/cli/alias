@@ -1,5 +1,31 @@
 [toplevel]
 
+zone-by-name = !f() {
+    aws route53 list-hosted-zones-by-name \
+        --max-items 1 \
+        --dns-name "$1" \
+        --query 'HostedZones[0].{
+            Count: ResourceRecordSetCount,
+            Name: Name,
+            Private: Config.PrivateZone,
+            Id: Id
+        }'
+  }; f
+
+zone-rrs = !f() {
+    HZ=$(aws zone-by-name $1)
+    HZID=$(echo "$HZ" | jq -r .Id)
+    HZNAME=$(echo "$HZ" | jq -r .Name)
+    if ! echo "$HZNAME" | grep "^$1" >/dev/null
+    then
+      echo "$HZNAME does not match $1"
+      exit 1
+    fi
+    aws route53 list-resource-record-sets \
+        --hosted-zone-id $HZID \
+        --output text
+  }; f
+
 # aws find-by-name www1
 find-by-name = !f() {
     aws ec2 describe-instances \
@@ -11,10 +37,32 @@ find-by-name = !f() {
             PrivateIpAddress: PrivateIpAddress,
             State: State.Name,
             StateReason: StateReason.Message,
-            Name: Tags[?Key==`Name`].Value|[0],
-            Tier: Tags[?Key==`Tier`].Value|[0],
-            Level: Tags[?Key==`Level`].Value|[0]
+            Name: Tags[?Key==`Name`].Value|[0]
         }'
+  }; f
+
+list-instances = !f() {
+    aws ec2 describe-instances \
+        --output table \
+        --query 'Reservations[*].Instances[*].{
+            InstanceId: InstanceId,
+            PublicIpAddress: PublicIpAddress,
+            PrivateIpAddress: PrivateIpAddress,
+            State: State.Name,
+            Name: Tags[?Key==`Name`].Value|[0]
+        }'
+  }; f
+
+list-lcs = !f() {
+    aws autoscaling describe-launch-configurations \
+        --output table \
+        --query 'LaunchConfigurations[*].LaunchConfigurationName'
+  }; f
+
+list-sgs = !f() {
+    aws ec2 describe-security-groups \
+        --output table \
+        --query 'SecurityGroups[*].GroupName'
   }; f
 
 start-instance = !f() {
