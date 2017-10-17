@@ -51,6 +51,7 @@ NeoBundle 'ekalinin/Dockerfile.vim'
 
 NeoBundle 'Glench/Vim-Jinja2-Syntax'
 NeoBundle 'saltstack/salt-vim'
+NeoBundle 'martinda/Jenkinsfile-vim-syntax'
 
 call neobundle#end()
 
@@ -124,6 +125,7 @@ nnoremap <leader>q :qa<cr>
 nnoremap <leader>w :w<cr>
 nnoremap <leader>m :!make<cr>
 nnoremap <leader>t :wa <bar> :!clear && rake test <cr>
+nnoremap <leader>f zR
 
 nnoremap <C-h> <C-w>h
 nnoremap <C-j> <C-w>j
