@@ -1,6 +1,8 @@
 Dockerfile.vim
 FuzzyFinder
+Jenkinsfile-vim-syntax
 L9
+Vim-Jinja2-Syntax
 VimClojure
 YankRing.vim
 bufexplorer.zip
@@ -8,6 +10,7 @@ command-t
 mru.vim
 neobundle.vim
 nginx.vim
+salt-vim
 sparkup
 unite.vim
 vim-airline
@@ -15,7 +18,7 @@ vim-bufferline
 vim-coffee-script
 vim-colors-solarized
 vim-fugitive
-vim-golang
+vim-go
 vim-json
 vim-less
 vim-markdown
