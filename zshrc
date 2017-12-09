@@ -18,7 +18,6 @@ COMPLETION_WAITING_DOTS="true"
 DEFAULT_USER='rpasay'
 HISTSIZE=100000
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
-HOMEBREW_NO_AUTO_UPDATE=1
 
 # Show timing information if above configured threshold
 ZSH_COMMAND_TIME_ECHO=1
