@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2017-10-04T11:26:33-0700
+# last-modified: 2017-11-21T15:02:50-0800
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -48,7 +48,8 @@
     count = shortlog -sn --no-merges
                                 ; shortlog summary with commit count (no merges)
     cp = cherry-pick -x         ; cherry-pick (mnemonic: copy, cp)
-    cra = commit --amend --reset-author
+    cra = commit --amend --reset-author             ; reset author
+    cram = commit --amend --reset-author --no-edit  ; reset author keep commit
     dc = diff --cached          ; diff staged changes vs index
     di = diff                   ;   working tree vs index
     dis = diff --stat=200,120   ;     but only filenames
