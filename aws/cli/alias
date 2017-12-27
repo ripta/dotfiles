@@ -41,6 +41,21 @@ find-by-name = !f() {
         }'
   }; f
 
+# aws find-by-names www1*
+find-by-names = !f() {
+    aws ec2 describe-instances \
+        --output json \
+        --filter "Name=tag:Name,Values=$1" \
+        --query 'Reservations[*].Instances[*].{
+            InstanceId: InstanceId,
+            PublicIpAddress: PublicIpAddress,
+            PrivateIpAddress: PrivateIpAddress,
+            State: State.Name,
+            StateReason: StateReason.Message,
+            Name: Tags[?Key==`Name`].Value|[0]
+        }'
+  }; f
+
 list-instances = !f() {
     aws ec2 describe-instances \
         --output table \
