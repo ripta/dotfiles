@@ -10,9 +10,4 @@ then
 
     export GOROOT=`go env GOROOT`
     export PATH=$GOPATH/bin:$PATH
-
-    alias gopath="cd $GOPATH"
-    gowd() {
-      cd $GOPATH/src/${1:-github.com/ripta}
-    }
 fi
