@@ -214,7 +214,7 @@ prompt_status() {
 
 prompt_aws() {
   if [[ -n "$AWS_DEFAULT_PROFILE" ]]; then
-    prompt_segment magenta white "(AWS) $AWS_DEFAULT_PROFILE"
+    prompt_segment magenta white "aws:$AWS_DEFAULT_PROFILE"
   fi
 }
 
