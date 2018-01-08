@@ -104,10 +104,7 @@ brew "sops"
 brew "sox"
 brew "speedtest-cli"
 brew "sysdig"
-brew "terraform", link: false
-brew "tfenv", link: false
 brew "the_platinum_searcher"
-brew "the_silver_searcher", link: false
 brew "tinc"
 brew "tmux"
 brew "tmux-cssh"
