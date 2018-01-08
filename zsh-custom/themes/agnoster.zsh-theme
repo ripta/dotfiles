@@ -212,12 +212,26 @@ prompt_status() {
   [[ -n "$symbols" ]] && prompt_segment black default "$symbols"
 }
 
+prompt_aws() {
+  if [[ -n "$AWS_DEFAULT_PROFILE" ]]; then
+    prompt_segment magenta white "(AWS) $AWS_DEFAULT_PROFILE"
+  fi
+}
+
+prompt_docker_machine() {
+  if [[ -n "$DOCKER_MACHINE_NAME" ]]; then
+    prompt_segment black white "dm:$DOCKER_MACHINE_NAME"
+  fi
+}
+
 ## Main prompt
 build_prompt() {
   RETVAL=$?
   prompt_status
   prompt_virtualenv
   prompt_context
+  prompt_aws
+  prompt_docker_machine
   prompt_dir
   prompt_git
   prompt_bzr
