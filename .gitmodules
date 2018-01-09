@@ -74,3 +74,10 @@
 	path = modules/fonts
 	url = git@github.com:ripta/fonts.git
 	branch = master
+[submodule "vim/bundle/Jenkinsfile-vim-syntax"]
+  path = vim/bundle/Jenkinsfile-vim-syntax
+  url = git@github.com:martinda/Jenkinsfile-vim-syntax.git
+  branch = master
+[submodule "vim/bundle/bufexplorer"]
+	path = vim/bundle/bufexplorer
+	url = git@github.com:jlanzarotta/bufexplorer.git
