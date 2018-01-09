@@ -20,7 +20,7 @@ gogo() {
   do
     if [ -n "$name" ]
     then
-      if [ "$dir" =~ "$name" ]
+      if [[ "$dir" =~ "$name" ]]
       then
         if [ $matches -eq 0 ]
         then
