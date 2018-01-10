@@ -1,27 +1,74 @@
 # ZipRecruiter
-if [ -d "/vol/$USER/ziprecruiter" ]
-then
-  export STARTERVIEW="/vol/$USER/ziprecruiter"
-elif [ -d "$HOME/ziprecruiter" ]
-then
-  export STARTERVIEW="$HOME/ziprecruiter"
-elif [ -d "/var/starterview" ]
-then
-  export STARTERVIEW="/var/starterview"
-elif [ -d "$HOME/Projects/ziprecruiter" ]
-then
-  export STARTERVIEW="$HOME/Projects/ziprecruiter"
-elif [ -d "$HOME/Projects/zr/ziprecruiter" ]
-then
-  export STARTERVIEW="$HOME/Projects/zr/ziprecruiter"
-fi
 
-if [ -d "$STARTERVIEW" -o -f "/etc/ziprecruiter.yml" ]
-then
-  alias gozr="cd $STARTERVIEW"
-else
-  return
-fi
+local -a reporoots
+local reporoot
+
+reporoots=(
+  /vol/$USER/ziprecruiter
+  /vol/$USER/zr
+  /vol/home/$USER/ziprecruiter
+  /vol/home/$USER/zr
+  $HOME/ziprecruiter
+  $HOME/zr
+  $HOME/Projects/ziprecruiter
+  $HOME/Projects/zr
+  /var/starterview
+)
+
+for candidate in $reporoots
+do
+  if [ -d "$candidate" ]
+  then
+    reporoot="$candidate"
+    break
+  fi
+done
+
+gozr() {
+  if [ -z "$reporoot" ]
+  then
+    echo "» error: repository root not defined" >&2
+    return
+  fi
+
+  if [ -z "$1" ]
+  then
+    cd "$reporoot"
+    echo "» root" >&2
+    return
+  fi
+
+  name="$1"
+  basedir="$reporoot"
+
+  found=""
+  matches=0
+  for dir in $(find "$basedir" -maxdepth 2 -type d | sed "s#^$basedir/##")
+  do
+    if [ -n "$name" ]
+    then
+      if [[ "$dir" =~ "$name" ]]
+      then
+        if [ $matches -eq 0 ]
+        then
+          found="$dir"
+        fi
+        echo "$dir"
+        matches=$(($matches + 1))
+      fi
+    else
+      matches=$(($matches + 1))
+      echo "$dir"
+    fi
+  done
+
+  if [ $matches -eq 1 ]
+  then
+    cd "$basedir/$found"
+  else
+    echo "» $matches candidates «" >&2
+  fi
+}
 
 export LOCAL_SANDBOX_USERNAME=ripta
 
