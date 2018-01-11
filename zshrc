@@ -23,7 +23,7 @@ HISTSIZE=100000
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 plugins=(docker encode64 fancy-ctrl-z jsontools kubectl osx redis-cli sprunge ssh-agent rvm bundler brew aws z)
-plugins+=(bd fleetctl gogo rpasay-git)
+plugins+=(bd direnv fleetctl gogo rpasay-git)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
 zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa id_rsa_2015 google_compute_engine
