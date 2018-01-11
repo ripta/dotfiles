@@ -71,14 +71,3 @@ gozr() {
 }
 
 export LOCAL_SANDBOX_USERNAME=ripta
-
-# Infrastructure repository
-INFRAWD="$HOME/Projects/git/ZipRecruiter/infrastructure"
-if [ -d "$INFRAWD/bin" ]
-then
-  export INFRAWD
-  export PATH="$INFRAWD/bin:$PATH"
-
-  alias ztf='zr-terraform'
-fi
-
