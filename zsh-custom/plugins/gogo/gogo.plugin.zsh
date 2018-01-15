@@ -13,6 +13,7 @@
 #
 gogo() {
   name="$1"
+  choice="$2"
   basedir="$GOPATH/src"
   found=""
   matches=0
@@ -22,23 +23,29 @@ gogo() {
     then
       if [[ "$dir" =~ "$name" ]]
       then
-        if [ $matches -eq 0 ]
+        if [[ ( $choice -eq 0 && $matches -eq 0 ) || $(($matches + 1)) -eq $choice ]]
         then
           found="$dir"
         fi
-        echo "$dir"
         matches=$(($matches + 1))
+        echo "$dir"
       fi
     else
       matches=$(($matches + 1))
       echo "$dir"
     fi
   done
-  if [ $matches -eq 1 ]
+  if [[ $matches -eq 1 && $choice -le $matches ]]
   then
     cd "$basedir/$found"
   else
-    echo "» $matches candidates «" >&2
+    if [[ $matches -gt 0 && $choice -gt 0 && $choice -le $matches ]]
+    then
+      cd "$basedir/$found"
+      echo "» chose candidate #$choice «" >&2
+    else
+      echo "» found $matches candidates «" >&2
+    fi
   fi
 }
 
