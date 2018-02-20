@@ -180,5 +180,5 @@ endfunc
 au BufNewFile,BufRead *.confluence setf confluence
 au FileType ruby setlocal shiftwidth=2 tabstop=2 softtabstop=2 shiftwidth=2
 
-set directory=~/.vim/swappage//
+set directory=~/.dotfiles/vim/swappage//
 
