@@ -224,6 +224,12 @@ prompt_docker_machine() {
   fi
 }
 
+prompt_kubeconfig() {
+  if [[ -n "$KUBECONFIG" ]]; then
+    prompt_segment black white "$(basename $KUBECONFIG)"
+  fi
+}
+
 ## Main prompt
 build_prompt() {
   RETVAL=$?
@@ -232,6 +238,7 @@ build_prompt() {
   prompt_context
   prompt_aws
   prompt_docker_machine
+  prompt_kubeconfig
   prompt_dir
   prompt_git
   prompt_bzr
