@@ -24,7 +24,7 @@ _awscli-homebrew-installed() {
 export AWS_HOME=~/.aws
 
 function agp {
-  echo $AWS_DEFAULT_PROFILE
+  echo "AWS_DEFAULT_PROFILE=$AWS_DEFAULT_PROFILE"
 }
 
 function asp {
