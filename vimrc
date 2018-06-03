@@ -140,7 +140,6 @@ augroup vimrc
 augroup END
 
 au syntax mason so /usr/share/vim/vim73/syntax/mason.vim
-au BufNewFile,BufRead *.html set ft=mason
 au BufNewFile,BufRead autohandler set ft=mason
 au BufNewFile,BufRead dhandler set ft=mason
 au BufNewFile,BufRead Thorfile set ft=ruby
