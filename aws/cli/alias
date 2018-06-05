@@ -80,11 +80,12 @@ list-sgs = !f() {
         --query 'SecurityGroups[*].GroupName'
   }; f
 
+# aws start-instance sandbox-01.dev-ue2
 start-instance = !f() {
     INSTANCE=$(aws find-by-name $1)
     IID=$(echo "$INSTANCE" | jq -r .InstanceId)
     ISTATE=$(echo "$INSTANCE" | jq -r .State)
-    [ -z "$IID" ] && exit 1
+    [[ -z "$IID" || "$IID" == "null" ]] && echo "Instance '$1' not found" && exit 1
     [ "$ISTATE" != "stopped" ] && echo "Instance $IID is already $ISTATE" && exit
     echo "Instance $IID currently $ISTATE"
     echo "Starting..."
