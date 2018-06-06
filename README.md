@@ -1,15 +1,15 @@
 
 1. Install [rcm](https://github.com/thoughtbot/rcm#installation).
-2. Get dotfiles: 
+2. Download install script:
 
   ```bash
-  cd
-  git clone git@github.com:ripta/dotfiles.git .dotfiles
-  cd .dotfiles
-  git submodule init
-  git submodule update
+  curl -LO https://raw.githubusercontent.com/ripta/dotfiles/master/install.sh
   ```
 
-3. Preview dotfiles: `RCRC=~/.dotfiles/rcrc lsrc`
-4. Install dotfiles: `RCRC=~/.dotfiles/rcrc rcup -v`
+3. Read through the contents.
+4. Run it if you're sure:
+
+  ```bash
+  sh install.sh
+  ```
 
