@@ -26,6 +26,21 @@ zone-rrs = !f() {
         --output text
   }; f
 
+# aws find-by-ip 10.11.74.84
+find-by-ip = !f() {
+    aws ec2 describe-instances \
+        --output json \
+        --filter "Name=private-ip-address,Values=$1" \
+        --query 'Reservations[0].Instances[0].{
+            InstanceId: InstanceId,
+            PublicIpAddress: PublicIpAddress,
+            PrivateIpAddress: PrivateIpAddress,
+            State: State.Name,
+            StateReason: StateReason.Message,
+            Name: Tags[?Key==`Name`].Value|[0]
+        }'
+  }; f
+
 # aws find-by-name www1
 find-by-name = !f() {
     aws ec2 describe-instances \
