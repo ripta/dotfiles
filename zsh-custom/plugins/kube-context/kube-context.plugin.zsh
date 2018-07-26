@@ -4,6 +4,10 @@ function kt {
   then
     for dir in ~/.kube/configs ~/.ssh/kubeconfigs
     do
+      if [[ ! -d "$dir" ]]
+      then
+        continue
+      fi
       for cand in $(ls "$dir")
       do
         if [[ -n "$KUBECONFIG" && "$KUBECONFIG" = "$dir/$cand" ]]
