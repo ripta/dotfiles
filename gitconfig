@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2018-08-03T10:57:58-0700
+# last-modified: 2018-09-05T10:28:03-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -93,6 +93,7 @@
     mffs = merge --ff-only --squash
     mis = merge --no-ff -Xignore-space-change
                                 ;   ignore whitespace changes
+    mr = merge-reviewed         ; merge a reviewed branch
     mrns = merge -s recursive -Xignore-space-change
                                 ;   recursively, no space
     mt = mergetool              ; see [mergetool]
