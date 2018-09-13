@@ -24,7 +24,7 @@ do
   fi
 done
 
-gozr() {
+tozr() {
   if [ -z "$reporoot" ]
   then
     echo "» error: repository root not defined" >&2
