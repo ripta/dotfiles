@@ -43,7 +43,7 @@ tozr() {
 
   found=""
   matches=0
-  for dir in $(find "$basedir" -maxdepth 2 -type d | sed "s#^$basedir/##")
+  for dir in $(find -L "$basedir" -maxdepth 2 -type d | sed "s#^$basedir/##")
   do
     if [ -n "$name" ]
     then
