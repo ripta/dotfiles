@@ -108,3 +108,31 @@ start-instance = !f() {
     echo "Waiting for $IID to start..."
     aws ec2 wait instance-running --instance-ids "$IID"
   }; f
+
+# aws get-all-versions BUCKET-NAME PREFIX-ID TARGET-DIR
+get-all-versions = !f() {
+    BUCKET="$1"
+    PREFIX="$2"
+    TARGET="$3"
+    SESSFILE="$(mktemp)"
+    BUFFER="${SESSFILE}.txt"
+    LOG="${SESSFIL}.log"
+    mkdir -p $TARGET
+    set -euo pipefail
+    aws s3api list-object-versions --bucket $BUCKET --prefix $PREFIX \
+      | jq -r '.Versions[] | .VersionId + " " + .LastModified + " " + (.IsLatest | tostring) + " " + .Key' > $BUFFER
+    echo "Found $(wc -l $BUFFER) objects..." >&2
+    cat $BUFFER \
+      | while read VID MOD CUR KEY; do \
+          mkdir -p $TARGET/$KEY
+          echo "$BUCKET $KEY $VID $TARGET/$KEY/$VID" | tee -a $LOG
+          if [ ! -f "$TARGET/$KEY/$VID" ]; then
+            aws s3api get-object --bucket $BUCKET --key $KEY --version-id $VID $TARGET/$KEY/$VID >> $LOG
+            touch -t "$(echo $MOD | tr -d 'T-:.Z' | cut -c1-12)" $TARGET/$KEY/$VID
+          fi
+          if [ "$CUR" = "true" ]; then
+            rm -f $TARGET/$KEY/LATEST
+            ln -s $TARGET/$KEY/$VID $TARGET/$KEY/LATEST
+          fi
+        done
+  }; f
