@@ -124,15 +124,15 @@ get-all-versions = !f() {
     echo "Found $(wc -l $BUFFER) objects..." >&2
     cat $BUFFER \
       | while read VID MOD CUR KEY; do \
-          mkdir -p $TARGET/$KEY
+          mkdir -p $TARGET/$KEY $TARGET/$KEY/.ts
           echo "$BUCKET $KEY $VID $TARGET/$KEY/$VID" | tee -a $LOG
           if [ ! -f "$TARGET/$KEY/$VID" ]; then
             aws s3api get-object --bucket $BUCKET --key $KEY --version-id $VID $TARGET/$KEY/$VID >> $LOG
             touch -t "$(echo $MOD | tr -d 'T-:.Z' | cut -c1-12)" $TARGET/$KEY/$VID
           fi
           if [ "$CUR" = "true" ]; then
-            rm -f $TARGET/$KEY/LATEST
-            ln -s $TARGET/$KEY/$VID $TARGET/$KEY/LATEST
+            (cd $TARGET/$KEY; ln -sf $VID LATEST)
           fi
+          (cd $TARGET/$KEY/.ts; ln -f ../$VID $(echo $MOD | tr -d ':'))
         done
   }; f
