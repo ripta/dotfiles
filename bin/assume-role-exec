@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+#
+# https://github.com/ripta/dotfiles/blob/master/bin/assume-role-exec
+
+set -euo pipefail
+
+log() {
+  echo "$@" >&2
+}
+
+usage() {
+  log "Usage:"
+  log "  $0 <role-arn> [prog [args...]]"
+  log "  $0 <acct-id>,<role-name> [prog [args...]]"
+  log
+  log "If [prog] is not provided and \$SHELL is set, a new shell will be executed."
+  log "[prog] will have its AWS_PROFILE_DISPLAY_NAME env set to the assumed role's ID."
+  log
+  log "Examples:"
+  log "  $0 arn:aws:iam::123456789012:role/OrganizationAccountAccessRole"
+  log "  $0 arn:aws:iam::123456789012:role/OrganizationAccountAccessRole aws sts get-caller-identity"
+  log "  $0 123456789012,OrganizationAccountAccessRole aws sts get-caller-identity"
+  exit 1
+}
+
+if [[ "$#" -lt "1" ]]; then usage; fi
+
+arn="$1"
+shift
+
+if [[ $arn == *,* ]]
+then
+  arn="arn:aws:iam::$(echo $arn | cut -d, -f1):role/$(echo $arn | cut -d, -f2)"
+fi
+
+if [[ "$#" -lt "1" && -z "$SHELL" ]]
+then
+  log "ERROR: \$SHELL is not set; please specify a program to run"
+  log
+  usage
+fi
+
+rsn="$(id -un)-$RANDOM"
+creddir="$HOME/.aws/assume-role-exec"
+credfile="$(echo $arn | md5).json"
+credpath="$creddir/$credfile"
+
+if [[ ! -d $creddir ]]
+then
+  log "Created $creddir"
+  mkdir -p $creddir
+fi
+
+if [[ -f $credpath ]]
+then
+  log "Found credentials in $credfile"
+  expiration="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$(jq -r .Credentials.Expiration $credpath)" +%s)"
+  current="$(date +%s)"
+  delta=$((expiration - current))
+  if [[ $delta < 0 ]]
+  then
+    log "Refreshing credentials"
+    rm -f $credpath
+  else
+    log "Credentials expiring in $delta seconds"
+  fi
+fi
+
+if [[ ! -f $credpath ]]
+then
+  log "Assuming role $arn with name $rsn"
+  aws sts assume-role --role-arn $arn --role-session-name $rsn > $credpath
+  if [[ $? -gt 0 ]]
+  then
+    rm -f $credpath
+    exit 1
+  fi
+fi
+
+displayNamePrefix=
+if [[ -n ${AWS_PROFILE_DISPLAY_NAME-} ]]
+then
+  displayNamePrefix="$AWS_PROFILE_DISPLAY_NAME:"
+fi
+
+export AWS_ACCESS_KEY_ID="$(jq -r .Credentials.AccessKeyId $credpath)"
+export AWS_SECRET_ACCESS_KEY="$(jq -r .Credentials.SecretAccessKey $credpath)"
+export AWS_SESSION_TOKEN="$(jq -r .Credentials.SessionToken $credpath)"
+export AWS_PROFILE_DISPLAY_NAME="$displayNamePrefix$(jq -r .AssumedRoleUser.AssumedRoleId $credpath | cut -d: -f1)"
+
+if [[ "$#" -lt "1" ]]
+then
+  exec "$SHELL"
+else
+  exec "$@"
+fi
