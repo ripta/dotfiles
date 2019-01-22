@@ -1,5 +1,7 @@
 [toplevel]
 
+whoami = sts get-caller-identity
+
 zone-by-name = !f() {
     aws route53 list-hosted-zones-by-name \
         --max-items 1 \
