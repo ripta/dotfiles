@@ -215,6 +215,8 @@ prompt_status() {
 prompt_aws() {
   if [[ -n "$AWS_DEFAULT_PROFILE" ]]; then
     prompt_segment magenta white "aws:$AWS_DEFAULT_PROFILE"
+  elif [[ -n "$AWS_PROFILE_DISPLAY_NAME" ]]; then
+    prompt_segment magenta white "aws:$AWS_PROFILE_DISPLAY_NAME"
   fi
 }
 
