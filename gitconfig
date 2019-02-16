@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2018-10-22T20:16:13-0700
+# last-modified: 2019-02-06T10:11:27-0800
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -123,6 +123,8 @@
     rlo = reflog                ; reflog
     rmls = deleted-files        ; find deleted files, requires git-deleted-files
     rp = rev-parse
+    rpa = repack -A             ; repack, keeping unreachable objects loose
+                                ;   cleanup using "git gca"
     rpo = remote prune origin   ; prune local branches that are tracking deleted
                                 ;   remote branches
     rs = reset                  ; reset the tip and index, but not the working tree
