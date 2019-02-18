@@ -138,3 +138,25 @@ get-all-versions = !f() {
           (cd $TARGET/$KEY/.ts; ln -f ../$VID $(echo $MOD | tr -d ':'))
         done
   }; f
+
+# aws exec-as 123456789012
+# aws exec-as 123456789012 aws s3 ls
+exec-as = !f() {
+    assume-role-exec $@
+  }; f
+
+# Execute a command in every account:
+#   aws exec-every-as aws s3 ls
+exec-every-as= !f() {
+    if [[ $# -lt 1 ]]
+    then
+      echo "Usage: aws exec-every-as <command>" >&2
+      exit 1
+    fi
+    aws organizations list-accounts \
+      --query 'Accounts[].[Id]' \
+      --output text \
+      | while read ACCTID; do \
+          aws exec-as $ACCTID $@
+        done
+  }; f
