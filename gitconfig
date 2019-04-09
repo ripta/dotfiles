@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2019-02-06T10:11:27-0800
+# last-modified: 2019-04-09T14:20:12-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -243,9 +243,9 @@
     cmd = "vim -f $BASE $LOCAL $REMOTE $MERGED -c 'SpliceInit'"
     trustExitCode = true
 
-# By default, push a single branch to its tracked upstream, and nothing more.
+# Push the current branch to the upstream branch
 [push]
-    default = tracking
+    default = upstream
 
 # Just-don't-even autostash before rebasing.
 [rebase]
