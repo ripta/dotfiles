@@ -118,12 +118,13 @@ get-all-versions = !f() {
     TARGET="$3"
     SESSFILE="$(mktemp)"
     BUFFER="${SESSFILE}.txt"
-    LOG="${SESSFIL}.log"
+    LOG="${SESSFILE}.log"
     mkdir -p $TARGET
     set -euo pipefail
     aws s3api list-object-versions --bucket $BUCKET --prefix $PREFIX \
       | jq -r '.Versions[] | .VersionId + " " + .LastModified + " " + (.IsLatest | tostring) + " " + .Key' > $BUFFER
     echo "Found $(wc -l $BUFFER) objects..." >&2
+    echo "Logging to $LOG" >&2
     cat $BUFFER \
       | while read VID MOD CUR KEY; do \
           mkdir -p $TARGET/$KEY $TARGET/$KEY/.ts
