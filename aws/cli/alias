@@ -111,6 +111,25 @@ start-instance = !f() {
     aws ec2 wait instance-running --instance-ids "$IID"
   }; f
 
+# aws choke-instance sandbox-01.dev-ue1
+choke-instance = !f() {
+    INSTANCE=$(aws find-by-name $1)
+    IID=$(echo "$INSTANCE" | jq -r .InstanceId)
+    ISTATE=$(echo "$INSTANCE" | jq -r .State)
+    [[ -z "$IID" || "$IID" == "null" ]] && echo "Instance '$1' not found" && exit 1
+    [ "$ISTATE" = "stopped" ] && echo "Instance $IID is already stopped" && exit
+    echo "Instance $IID currently $ISTATE"
+    echo "Stopping..."
+    aws ec2 stop-instances --instance-ids "$IID"
+    echo "Waiting for $IID to stop..."
+    aws ec2 wait instance-stopped --instance-ids "$IID" || {
+      echo "Failed to stop. Force stopping..."
+      aws ec2 stop-instances --instance-ids "$IID" --force
+      echo "Waiting for $IID to stop..."
+      aws ec2 wait instance-stopped --instance-ids "$IID"
+    }
+  }; f
+
 # aws get-all-versions BUCKET-NAME PREFIX-ID TARGET-DIR
 get-all-versions = !f() {
     BUCKET="$1"
