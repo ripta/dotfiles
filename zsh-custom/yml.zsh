@@ -7,5 +7,5 @@ function y2j() {
 }
 
 function yq() {
-    y2j | jq "$@"
+    y2j | jq "$@" | j2y
 }
