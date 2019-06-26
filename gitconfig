@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2019-04-09T14:20:12-0700
+# last-modified: 2019-06-26T15:11:54-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -83,6 +83,7 @@
     lme = !git log --author=$(git config user.email) || exit 0
                                 ;   just mine, and always succeed
     lnm = log --no-merges       ;   without merge commits
+    lol = !echo 🙃
     lost = fsck --cache --no-reflogs --lost-found --unreachable HEAD
                                 ;   find anything unreachable by any means
                                 ;   (cache, reflogs, refs)
