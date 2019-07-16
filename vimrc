@@ -127,6 +127,7 @@ nnoremap <leader>t :wa <bar> :!clear && rake test <cr>
 nnoremap <leader>f zR
 nnoremap <leader>n :set number!<cr>
 nnoremap <leader>0 :set relativenumber!<cr>
+nnoremap <leader>c :w !pbcopy<cr>
 
 nnoremap <C-h> <C-w>h
 nnoremap <C-j> <C-w>j
