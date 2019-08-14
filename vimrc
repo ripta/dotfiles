@@ -16,34 +16,16 @@ call neobundle#begin(expand('~/.dotfiles/vim/bundle/'))
 
 NeoBundleFetch 'Shougo/neobundle.vim'
 
-NeoBundle 'Shougo/vimproc'
 NeoBundle 'Shougo/unite.vim'
 
 NeoBundle 'altercation/vim-colors-solarized'
 
-NeoBundle 'tpope/vim-fugitive'
-NeoBundle 'vim-scripts/bufexplorer.zip'
-NeoBundle 'vim-scripts/mru.vim'
-
-"NeoBundle 'Lokaltog/vim-easymotion', '09c0cea8'
-"NeoBundle 'sophacles/vim-bundle-mako'
-
 NeoBundle 'rstacruz/sparkup', {'rtp': 'vim/'}
-
-NeoBundle 'L9'
-
-NeoBundle 'FuzzyFinder'
-
-"NeoBundle 'rails.vim'
-
-NeoBundle 'https://git.wincent.com/command-t.git'
 
 NeoBundle 'bling/vim-airline'
 NeoBundle 'bling/vim-bufferline'
 
 NeoBundle 'fatih/vim-go'
-NeoBundle 'groenewege/vim-less'
-NeoBundle 'kchmck/vim-coffee-script'
 NeoBundle 'tpope/vim-markdown'
 NeoBundle 'vim-scripts/nginx.vim'
 NeoBundle 'vim-scripts/VimClojure'
