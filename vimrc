@@ -149,10 +149,6 @@ au BufNewFile,BufRead Thorfile set ft=ruby
 syntax match nonascii "[^\x00-\x7F]"
 highlight nonascii guibg=Red ctermbg=2
 
-"autocmd vimenter * NERDTree
-"autocmd vimenter * if !argc() | NERDTree | endif
-
-"let g:ackprg="ack-grep -H --nocolor --nogroup --column"
 let g:vim_markdown_folding_disabled=1
 
 let g:airline_powerline_fonts = 1
@@ -171,17 +167,6 @@ function! LastModified()
 endfun
 autocmd BufWritePre * call LastModified()
 
-au BufNewFile,BufRead *.tt call s:AdjustTT2Type()
-func! s:AdjustTT2Type()
-    if ( getline(1) . getline(2) . getline(3) =~ '<\chtml' && getline(1) . getline(2) . getline(3) !~ '<[%?]' ) || getline(1) =~ '<!DOCTYPE HTML'
-        setf tt2html
-    else
-        setf tt2
-    endif
-endfunc
-
-" au BufNewFile,BufReadPre * setlocal foldmethod=syntax
-au BufNewFile,BufRead *.confluence setf confluence
 au FileType ruby setlocal shiftwidth=2 tabstop=2 softtabstop=2 shiftwidth=2
 
 set directory=~/.dotfiles/vim/swappage//
