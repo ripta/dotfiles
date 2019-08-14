@@ -126,11 +126,6 @@ augroup vimrc
     au BufWinEnter * if &fdm == 'indent' | setlocal foldmethod=manual | endif
 augroup END
 
-au syntax mason so /usr/share/vim/vim73/syntax/mason.vim
-au BufNewFile,BufRead autohandler set ft=mason
-au BufNewFile,BufRead dhandler set ft=mason
-au BufNewFile,BufRead Thorfile set ft=ruby
-
 syntax match nonascii "[^\x00-\x7F]"
 highlight nonascii guibg=Red ctermbg=2
 
