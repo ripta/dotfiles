@@ -1,5 +1,8 @@
 if !1 | finish | endif
 
+" vim8 packages doesn't like being pointed to ~/.vim, which is a symlink
+set packpath+=~/.dotfiles/vim
+
 filetype off
 
 if has('vim_starting')
