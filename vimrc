@@ -46,7 +46,6 @@ NeoBundle 'vim-scripts/nginx.vim'
 NeoBundle 'vim-scripts/VimClojure'
 NeoBundle 'vim-scripts/YankRing.vim'
 NeoBundle 'derekwyatt/vim-scala'
-NeoBundle 'elzr/vim-json'
 NeoBundle 'ekalinin/Dockerfile.vim'
 
 NeoBundle 'Glench/Vim-Jinja2-Syntax'
