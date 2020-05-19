@@ -26,7 +26,7 @@ plugins=(docker encode64 fancy-ctrl-z jsontools osx redis-cli sprunge ssh-agent 
 plugins+=(bd direnv fleetctl gogo kube-context)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
-zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa google_compute_engine
+zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa
 
 # Goodness, that's annoying.
 unsetopt correct_all
