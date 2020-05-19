@@ -5,7 +5,7 @@ ZSH_CUSTOM=$DOTFILES/zsh-custom
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
-ZSH_THEME="agnoster"
+ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # CASE_SENSITIVE="true"
 DISABLE_AUTO_UPDATE="true"
@@ -55,3 +55,5 @@ then
   source /usr/local/opt/asdf/asdf.sh
 fi
 
+# powerlevel10k configuration
+[[ ! -f $DOTFILES/zsh-custom/styles/normal.zsh ]] || source $DOTFILES/zsh-custom/styles/normal.zsh
