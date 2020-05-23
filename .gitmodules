@@ -84,6 +84,3 @@
 [submodule "zsh-custom/themes/powerlevel10k"]
 	path = zsh-custom/themes/powerlevel10k
 	url = git@github.com:romkatv/powerlevel10k.git
-[submodule "vim/pack/plugins/start/govim"]
-	path = vim/pack/plugins/start/govim
-	url = https://github.com/myitcv/govim.git
