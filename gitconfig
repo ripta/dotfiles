@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2019-06-26T15:11:54-0700
+# last-modified: 2020-05-22T22:08:53-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -113,6 +113,7 @@
     pso = push origin           ;   to origin
     pst = push --tags           ;   just tags
     psu = push -u origin        ;   and set up upstream tracking
+    psub = !git push -u origin `git symbolic-ref --short HEAD`
     r = rev-parse --show-toplevel ; root of git repo
     rb = rebase                 ; rebase
     rba = rebase --abort        ;   abort
