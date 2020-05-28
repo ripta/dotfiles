@@ -78,7 +78,8 @@ precmd() {
     plenv                   # perl version from plenv (https://github.com/tokuhirom/plenv)
     phpenv                  # php version from phpenv (https://github.com/phpenv/phpenv)
     haskell_stack           # haskell version from stack (https://haskellstack.org/)
-    kubecontext             # current kubernetes context (https://kubernetes.io/)
+    kube_plugin             # (custom) from kube plugin
+    # kubecontext           # current kubernetes context (https://kubernetes.io/)
     terraform               # terraform workspace (https://www.terraform.io)
     aws                     # aws profile (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
     aws_eb_env              # aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/)
@@ -1196,6 +1197,9 @@ precmd() {
   typeset -g POWERLEVEL9K_TERRAFORM_DEFAULT_FOREGROUND=4
   typeset -g POWERLEVEL9K_TERRAFORM_DEFAULT_BACKGROUND=0
   # typeset -g POWERLEVEL9K_TERRAFORM_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
+
+  #############[ kube_plugin: (custom) from kube plugin ]#############
+  typeset -g POWERLEVEL9K_KUBE_PLUGIN_SHOW_ON_COMMAND='kubectl'
 
   #############[ kubecontext: current kubernetes context (https://kubernetes.io/) ]#############
   # Show kubecontext only when the the command you are typing invokes one of these tools.
