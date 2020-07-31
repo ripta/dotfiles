@@ -1,0 +1,3 @@
+#!/bin/zsh
+
+exec kubectl get $(kubectl api-resources --output name --namespaced --verbs list | tr '\n' ',' | sed 's/,$//') --ignore-not-found "$@"
