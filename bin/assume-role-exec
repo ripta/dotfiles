@@ -64,7 +64,7 @@ then
   fi
 
   log "Found credentials in $credpath"
-  expiration="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$(jq -r .Credentials.Expiration $credpath)" +%s)"
+  expiration="$(date -u -j -f '%Y-%m-%dT%H:%M:%S+00:00' "$(jq -r .Credentials.Expiration $credpath)" +%s)"
   current="$(date +%s)"
   delta=$((expiration - current))
   if [[ $delta < 0 ]]
