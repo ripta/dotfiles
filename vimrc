@@ -18,7 +18,7 @@ NeoBundleFetch 'Shougo/neobundle.vim'
 
 NeoBundle 'Shougo/unite.vim'
 
-NeoBundle 'altercation/vim-colors-solarized'
+NeoBundle 'lifepillar/vim-solarized8'
 
 NeoBundle 'rstacruz/sparkup', {'rtp': 'vim/'}
 
@@ -48,7 +48,8 @@ set modelines=5
 
 syntax on
 set background=dark
-colorscheme solarized
+set termguicolors
+colorscheme solarized8
 
 set ts=2 sw=2 sts=2 et ai vb
 set bs=indent,eol,start

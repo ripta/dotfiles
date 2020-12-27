@@ -84,3 +84,6 @@
 [submodule "zsh-custom/themes/powerlevel10k"]
 	path = zsh-custom/themes/powerlevel10k
 	url = git@github.com:romkatv/powerlevel10k.git
+[submodule "vim/bundle/vim-solarized8"]
+	path = vim/bundle/vim-solarized8
+	url = https://github.com/lifepillar/vim-solarized8
