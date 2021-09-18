@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2020-05-22T22:08:53-0700
+# last-modified: 2021-09-18T10:58:22-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -157,6 +157,7 @@
     surm = !git submodule update --remote --merge
     ssr = !git submodule sync && git submodule update --init --recursive
                                 ; submodule sync (recursive)
+    sync = !git pr && git ps    ; sync = pull --rebase and push
     t = tag                     ; tag
     ta = tag -a                 ;   annotated
     tme = !git lme --no-merges --stat --name-only --pretty=format:'' | sort -u
