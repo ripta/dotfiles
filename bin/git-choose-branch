@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+choose-branch() {
+  local selections
+  selections="$(render-selections)" || return 1
+  fzf --ansi --preview 'git log -5 {}' <<<"${selections}"
+}
+
+list-branches() {
+  git for-each-ref 'refs/heads/**' --format='%(refname:short)%09%(committerdate:unix)%09%(committerdate:relative)%09%(HEAD)' \
+    | sort -k2 -r
+}
+
+render-selections() {
+  local branches branch lastcommit currmarker
+  list-branches \
+    | while IFS=$'\t' read -r branch _ lastcommit currmarker
+    do
+      [ "${currmarker}" = "*" ] && continue
+      printf "%s\t%s%s\n" "${branch}" "${lastcommit}"
+    done | column -t -s$'\t'
+}
+
+sel="$(choose-branch)"
+[ -n "${sel}" ] || exit 1
+git checkout "${sel%% *}"
+
