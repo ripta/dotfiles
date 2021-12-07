@@ -3,7 +3,10 @@
 choose-branch() {
   local selections
   selections="$(render-selections)" || return 1
-  fzf --ansi --preview 'git log -5 {}' <<<"${selections}"
+  fzf --ansi \
+    --preview "echo '{}' | cut -d' ' -f1 | xargs -L1 git log -${LINES:-20}" \
+    --preview-window 'right:65%' \
+    <<<"${selections}"
 }
 
 list-branches() {
