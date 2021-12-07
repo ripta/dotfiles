@@ -3,7 +3,7 @@
 choose-branch() {
   local selections
   selections="$(render-selections)" || return 1
-  fzf --ansi <<<"${selections}"
+  fzf --ansi --preview 'git log -5 {}' <<<"${selections}"
 }
 
 list-branches() {
