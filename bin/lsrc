@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 : ${RCM_LIB:=$(dirname "$0")/../share/rcm}
 . "$RCM_LIB/rcm.sh"
@@ -6,7 +6,7 @@
 pushdir() {
   DIR_STACK="$DIR_STACK:$PWD/$1"
   $DEBUG "cd'ing to $1 from $PWD with stack $DIR_STACK"
-  cd "$1"
+  cd -- "$1"
 }
 
 popdir() {
@@ -14,7 +14,7 @@ popdir() {
   prior="$(echo "$DIR_STACK" | sed -e "s|:$current$||" | sed -e 's/.*://g')"
   DIR_STACK="$(echo "$DIR_STACK" | sed -e 's/:[^:]*$//')"
   $DEBUG "cd'ing to $prior from $PWD with stack $DIR_STACK"
-  cd "$prior"
+  cd -- "$prior"
 }
 
 build_path() {
@@ -144,7 +144,7 @@ handle_file() {
   elif is_excluded "$dotfiles_subdir/$file" "$exclude_file_globs" "$include_file_globs"; then
     $VERBOSE "skipping excluded file $file"
   elif [ -d "$file" ] && is_excluded "$dotfiles_subdir/$file" "$symlink_dirs_file_globs" "$mk_dirs_file_globs"; then
-    show_file "$file" "$dest_dir" "$dotfiles_dir" "$dotfiles_subdir" $dotted
+    show_file "$file" "$dest_dir" "$dotfiles_dir" "$dotfiles_subdir" $dotted "$symlink_dirs_file_globs"
   elif [ -d "$file" ]; then
     show_dir "$file" "$dest_dir" "$dotfiles_dir" "$dotfiles_subdir" $dotted "$exclude_file_globs" "$include_file_globs" "$symlink_dirs_file_globs" "$mk_dirs_file_globs"
   else
@@ -166,7 +166,7 @@ dotfiles_dir_excludes() {
   $DEBUG "dotfiles_dir_excludes $dotfiles_dir"
   $DEBUG "  with excludes: $excludes"
 
-  for exclude in $excludes; do
+  for exclude in "$excludes"; do
     if echo "$exclude" | grep ':' >/dev/null; then
       dotfiles_dir_pat="$(echo "$exclude" | sed 's/:.*//')"
       file_glob="$(echo "$exclude" | sed 's/.*://')"
@@ -259,17 +259,17 @@ handle_command_line() {
     case "$opt" in
       F) show_sigils=1;;
       h) show_help ;;
-      I) includes="$includes $OPTARG";;
-      t) arg_tags="$arg_tags $OPTARG";;
+      I) includes="$(append_variable "$includes" "$OPTARG")" ;;
+      t) arg_tags="$(append_variable "$arg_tags" "$OPTARG")" ;;
       v) verbosity=$(($verbosity + 1));;
       q) verbosity=$(($verbosity - 1));;
-      d) dotfiles_dirs="$dotfiles_dirs $OPTARG";;
+      d) dotfiles_dirs="$(append_variable "$dotfiles_dirs" "$OPTARG")" ;;
       V) version=1;;
-      x) excludes="$excludes $OPTARG";;
-      S) symlink_dirs="$symlink_dirs $OPTARG";;
-      s) never_symlink_dirs="$never_symlink_dirs $OPTARG";;
-      U) undotted="$undotted $OPTARG";;
-      u) never_undotted="$never_undotted $OPTARG";;
+      x) excludes="$(append_variable "$excludes" "$OPTARG")" ;;
+      S) symlink_dirs="$(append_variable "$symlink_dirs" "$OPTARG")" ;;
+      s) never_symlink_dirs="$(append_variable "$never_symlink_dirs" "$OPTARG")" ;;
+      U) undotted="$(append_variable "$undotted" "$OPTARG")" ;;
+      u) never_undotted="$(append_variable "$never_undotted" "$OPTARG")" ;;
       B) hostname="$OPTARG";;
       ?) show_help 64 ;;
     esac
@@ -318,7 +318,9 @@ $DEBUG "NEVER_UNDOTTED: $NEVER_UNDOTTED"
 relative_root_dir="$PWD"
 
 for DOTFILES_DIR in $DOTFILES_DIRS; do
-  cd "$relative_root_dir"
+  cd -- "$relative_root_dir"
+
+  DOTFILES_DIR="$(eval echo "$DOTFILES_DIR")"
 
   if is_relative $DOTFILES_DIR; then
     DOTFILES_DIR="$PWD/$DOTFILES_DIR"
@@ -341,7 +343,7 @@ for DOTFILES_DIR in $DOTFILES_DIRS; do
   never_undotted_file_globs="$(dotfiles_dir_excludes "$DOTFILES_DIR" "$NEVER_UNDOTTED")"
   $DEBUG "never_undotted_file_globs: $never_undotted_file_globs"
 
-  cd "$DOTFILES_DIR"
+  cd -- "$DOTFILES_DIR"
   DIR_STACK=":$DOTFILES_DIR"
 
   host_files="$DOTFILES_DIR/host-$HOSTNAME"
@@ -359,7 +361,7 @@ for DOTFILES_DIR in $DOTFILES_DIRS; do
     popdir
   fi
 
-  cd "$DOTFILES_DIR"
+  cd -- "$DOTFILES_DIR"
 
   for tag in $TAGS; do
     if [ -d "tag-$tag" ]; then
@@ -377,7 +379,7 @@ for DOTFILES_DIR in $DOTFILES_DIRS; do
     fi
   done
 
-  cd "$DOTFILES_DIR"
+  cd -- "$DOTFILES_DIR"
 
   for escaped_file in ${FILES:-*}; do
     file="$(decode "$escaped_file")"
