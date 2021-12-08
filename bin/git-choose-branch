@@ -15,12 +15,12 @@ list-branches() {
 }
 
 render-selections() {
-  local branches branch lastcommit currmarker
+  local branch lastcommit currmarker
   list-branches \
     | while IFS=$'\t' read -r branch _ lastcommit currmarker
     do
       [ "${currmarker}" = "*" ] && continue
-      printf "%s\t%s%s\n" "${branch}" "${lastcommit}"
+      printf "%s\t%s\n" "${branch}" "${lastcommit}"
     done | column -t -s$'\t'
 }
 

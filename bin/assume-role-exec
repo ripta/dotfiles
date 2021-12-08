@@ -28,65 +28,64 @@ if [[ "$#" -lt "1" ]]; then usage; fi
 arn="$1"
 shift
 
-if [[ $arn == *,* ]]
+if [[ ${arn} == *,* ]]
 then
-  arn="arn:aws:iam::$(echo $arn | cut -d, -f1):role/$(echo $arn | cut -d, -f2)"
-elif [[ $arn =~ ^[0-9]+$ ]]
+  arn="arn:aws:iam::$(echo "${arn}" | cut -d, -f1):role/$(echo "${arn}" | cut -d, -f2)"
+elif [[ ${arn} =~ ^[0-9]+$ ]]
 then
   arn="arn:aws:iam::${arn}:role/OrganizationAccountAccessRole"
 fi
 
-if [[ "$#" -lt "1" && -z "$SHELL" ]]
+if [[ "$#" -lt "1" && -z "${SHELL}" ]]
 then
   log "ERROR: \$SHELL is not set; please specify a program to run"
   log
   usage
 fi
 
-rsn="$(id -un)-$RANDOM"
-creddir="$HOME/.aws/assume-role-exec"
-credfile="$(echo $arn | md5).json"
-credpath="$creddir/$credfile"
+rsn="$(id -un)-${RANDOM}"
+creddir="${HOME}/.aws/assume-role-exec"
+credfile="$(echo "${arn}" | md5).json"
+credpath="${creddir}/${credfile}"
 
-if [[ ! -d $creddir ]]
+if [[ ! -d ${creddir} ]]
 then
-  log "Created $creddir"
-  mkdir -p $creddir
+  log "Created ${creddir}"
+  mkdir -p "${creddir}"
 fi
 
 # When credpath exists and is not zero length:
-if [[ -s $credpath ]]
+if [[ -s ${credpath} ]]
 then
-  if ! jq . $credpath 1>/dev/null
+  if ! jq . "${credpath}" 1>/dev/null
   then
-    log "Credentials in $credpath is not valid JSON"
+    log "Credentials in ${credpath} is not valid JSON"
     exit 1
   fi
 
-  log "Found credentials in $credpath"
-  expiration="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$(jq -r .Credentials.Expiration $credpath)" +%s)"
+  log "Found credentials in ${credpath}"
+  expiration="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$(jq -r .Credentials.Expiration "${credpath}")" +%s)"
   current="$(date +%s)"
   delta=$((expiration - current))
-  if [[ $delta < 0 ]]
+  if [[ ${delta} -lt 0 ]]
   then
     log "Refreshing credentials"
-    rm -f $credpath
+    rm -f "${credpath}"
   else
-    log "Credentials expiring in $delta seconds"
+    log "Credentials expiring in ${delta} seconds"
   fi
   # When credpath exists (and implied that it's zero length):
-elif [[ -f $credpath ]]
+elif [[ -f ${credpath} ]]
 then
-  rm -f $credpath
+  rm -f "${credpath}"
 fi
 
-if [[ ! -f $credpath ]]
+if [[ ! -f ${credpath} ]]
 then
-  log "Assuming role $arn with name $rsn and caching into $credfile"
-  aws sts assume-role --role-arn $arn --role-session-name $rsn > $credpath
-  if [[ $? -gt 0 ]]
+  log "Assuming role ${arn} with name ${rsn} and caching into ${credfile}"
+  if ! aws sts assume-role --role-arn "${arn}" --role-session-name "${rsn}" > "${credpath}"
   then
-    rm -f $credpath
+    rm -f "${credpath}"
     exit 1
   fi
 fi
@@ -94,17 +93,18 @@ fi
 displayNamePrefix=
 if [[ -n ${AWS_PROFILE_DISPLAY_NAME-} ]]
 then
-  displayNamePrefix="$AWS_PROFILE_DISPLAY_NAME:"
+  displayNamePrefix="${AWS_PROFILE_DISPLAY_NAME}:"
 fi
 
-export AWS_ACCESS_KEY_ID="$(jq -r .Credentials.AccessKeyId $credpath)"
-export AWS_SECRET_ACCESS_KEY="$(jq -r .Credentials.SecretAccessKey $credpath)"
-export AWS_SESSION_TOKEN="$(jq -r .Credentials.SessionToken $credpath)"
-export AWS_PROFILE_DISPLAY_NAME="$displayNamePrefix$(jq -r .AssumedRoleUser.AssumedRoleId $credpath | cut -d: -f1)"
+AWS_ACCESS_KEY_ID="$(jq -r .Credentials.AccessKeyId "${credpath}")"
+AWS_SECRET_ACCESS_KEY="$(jq -r .Credentials.SecretAccessKey "${credpath}")"
+AWS_SESSION_TOKEN="$(jq -r .Credentials.SessionToken "${credpath}")"
+AWS_PROFILE_DISPLAY_NAME="${displayNamePrefix}$(jq -r .AssumedRoleUser.AssumedRoleId "${credpath}" | cut -d: -f1)"
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE_DISPLAY_NAME
 
 if [[ "$#" -lt "1" ]]
 then
-  exec "$SHELL"
+  exec "${SHELL}"
 else
   exec "$@"
 fi
