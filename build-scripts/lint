@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+txnormal=$(tput sgr0)
+txred=$(tput setaf 1)
+txwhite=$(tput setaf 7)
+txbright=$(tput bold)
+
+TIMEFORMAT="measure» %1lR (%P%% CPU)"
+
+log() {
+  echo "$@" >&2
+}
+
+measure() {
+  log
+  log "run» ${txbright}${txwhite}$* ${txnormal}"
+  time "$@"
+}
+
+grep -Elr '^#!(.*/|.*env +)(sh|bash|ksh)' bin \
+  | grep -v -e lsrc -e rcup -e rcdn \
+  | while read -r file; \
+  do \
+    measure shellcheck -x -o all "${file}"; \
+  done

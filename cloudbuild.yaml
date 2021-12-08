@@ -1,0 +1,6 @@
+steps:
+  - id: Security
+    name: gcr.io/$PROJECT_ID/langlinter-shell
+    env:
+      - TERM=xterm
+    entrypoint: ./build-scripts/lint
