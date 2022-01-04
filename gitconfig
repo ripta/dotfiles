@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2021-09-18T10:58:22-0700
+# last-modified: 2021-12-30T07:14:42+0000
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -236,6 +236,9 @@
 # large operations for a long time. Run "git gc" to manually clean up.
 [gc]
     auto = 0
+
+[init]
+    defaultBranch = main
 
 # Merge settings and tools.
 [merge]
