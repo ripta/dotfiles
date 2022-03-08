@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2021-12-30T07:14:42+0000
+# last-modified: 2022-01-19T21:24:09-0800
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -11,6 +11,7 @@
     detachedHead = false
     pushNonFastForward = false
     resolveConflict = false
+    skippedCherryPicks = false
     statusHints = false
 
 # Useful aliases:
