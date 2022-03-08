@@ -23,5 +23,5 @@ grep -Elr '^#!(.*/|.*env +)(sh|bash|ksh)' bin \
   | grep -v -e lsrc -e rcup -e rcdn -e imgcat \
   | while read -r file; \
   do \
-    measure shellcheck -x -o all "${file}"; \
+    measure shellcheck -x -o all -e SC2312 "${file}"; \
   done
