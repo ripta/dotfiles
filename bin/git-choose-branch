@@ -19,12 +19,12 @@ render-selections() {
   list-branches \
     | while IFS=$'\t' read -r branch _ lastcommit currmarker
     do
-      [ "${currmarker}" = "*" ] && continue
+      [[ "${currmarker}" = "*" ]] && continue
       printf "%s\t%s\n" "${branch}" "${lastcommit}"
     done | column -t -s$'\t'
 }
 
 sel="$(choose-branch)"
-[ -n "${sel}" ] || exit 1
+[[ -n "${sel}" ]] || exit 1
 git checkout "${sel%% *}"
 
