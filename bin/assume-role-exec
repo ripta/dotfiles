@@ -17,9 +17,22 @@ usage() {
   log "[prog] will have its AWS_PROFILE_DISPLAY_NAME env set to the assumed role's ID."
   log
   log "Examples:"
+  log
   log "  $0 arn:aws:iam::123456789012:role/OrganizationAccountAccessRole"
+  log "    execute an interactive shell after assuming the role"
+  log
   log "  $0 arn:aws:iam::123456789012:role/OrganizationAccountAccessRole aws sts get-caller-identity"
-  log "  $0 123456789012,OrganizationAccountAccessRole aws sts get-caller-identity"
+  log "    execute 'aws sts get-caller-identity' after assuming the role"
+  log
+  log "  $0 123456789012"
+  log "    assume the role 'OrganizationAccountAccessRole' in account 123456789012"
+  log
+  log "  $0 123456789012,Administrator"
+  log "    assume the role 'Administrator' in account 123456789012"
+  log
+  log "  $0 ,OrganizationAccountAccessRole aws sts get-caller-identity"
+  log "    assume the role 'OrganizationAccountAccessRole' in the current account"
+  log
   exit 1
 }
 
@@ -30,7 +43,14 @@ shift
 
 if [[ ${arn} == *,* ]]
 then
-  arn="arn:aws:iam::$(echo "${arn}" | cut -d, -f1):role/$(echo "${arn}" | cut -d, -f2)"
+  acctid=$(echo "${arn}" | cut -d, -f1)
+  if [[ -z "${acctid}" ]]
+  then
+    acctid=$(aws sts get-caller-identity --query Account --output text)
+    log "No account ID specified; using ${acctid}"
+  fi
+
+  arn="arn:aws:iam::${acctid}:role/$(echo "${arn}" | cut -d, -f2)"
 elif [[ ${arn} =~ ^[0-9]+$ ]]
 then
   arn="arn:aws:iam::${arn}:role/OrganizationAccountAccessRole"
