@@ -57,3 +57,6 @@ fi
 
 # powerlevel10k configuration
 [[ ! -f $DOTFILES/zsh-custom/styles/normal.zsh ]] || source $DOTFILES/zsh-custom/styles/normal.zsh
+
+# iTerm2 > Install Shell Integration
+[[ -f /Users/ripta/.iterm2_shell_integration.zsh ]] && source /Users/ripta/.iterm2_shell_integration.zsh || true
