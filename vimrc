@@ -60,6 +60,7 @@ set ruler
 set laststatus=2
 "set relativenumber
 "set undofile
+set re=0
 
 " A better leader character.
 let mapleader=","
