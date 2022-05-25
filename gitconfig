@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2022-01-19T21:24:09-0800
+# last-modified: 2022-05-25T11:48:35-0700
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -64,6 +64,8 @@
     fbm = filter-branch --msg-filter       ;   rewrite commit messages
     fbp = filter-branch --parent-filter    ;   rewrite commit parent SHA1s
     fbt = filter-branch --tree-filter      ;   rewrite an entire tree
+    fm = "!sh -c 'commit=$0 && branch=${1:-HEAD} && (git rev-list $commit..$branch --ancestry-path | cat -n; git rev-list $commit..$branch --first-parent | cat -n) | sort -k2 -s | uniq -f1 -d | sort -n | tail -1 | cut -f2'"
+                                ; https://stackoverflow.com/questions/8475448
     fp = format-patch           ; generate mailbox patches
     fo = fetch origin           ; fetch from origin
     foco = "!f() { git fetch origin && git checkout $1 && git pull --ff-only; }; f"
