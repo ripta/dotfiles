@@ -2,6 +2,8 @@
 
 whoami = sts get-caller-identity
 
+whereami = sts get-caller-identity --query Account --output text
+
 zone-by-name = !f() {
     aws route53 list-hosted-zones-by-name \
         --max-items 1 \
