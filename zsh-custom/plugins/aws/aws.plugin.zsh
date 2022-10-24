@@ -22,6 +22,7 @@ _awscli-homebrew-installed() {
 }
 
 export AWS_HOME=~/.aws
+export AWS_PAGER=''
 
 function agp {
   echo "AWS_DEFAULT_PROFILE=$AWS_DEFAULT_PROFILE"
