@@ -135,7 +135,7 @@ function __kubectl_get {
     if [[ $rsrc == ev* ]]
     then
       args=( "${args[@]}" "--sort-by=.lastTimestamp" )
-    elif [[ $rsrc == no ]] || [[ $rsrc == nodes ]]
+    elif [[ $rsrc == no ]] || [[ $rsrc == nodes ]] || [[ $rsrc == rs ]]
     then
       args=( "${args[@]}" "--sort-by=.metadata.creationTimestamp" )
     fi
