@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2022-05-25T11:48:35-0700
+# last-modified: 2023-01-06T19:44:38-0800
 # ---
 
 # Stop giving me noob warnings; I know what a non-ff push is, and I know what
@@ -286,6 +286,9 @@
 [user]
     name = Ripta Pasay
     email = ripta@users.noreply.github.com
+
+[tag]
+    sort = v:refname
 
 [filter "hawser"]
 	clean = git hawser clean %f
