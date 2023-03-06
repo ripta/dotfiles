@@ -60,3 +60,6 @@ fi
 
 # iTerm2 > Install Shell Integration
 [[ -f /Users/ripta/.iterm2_shell_integration.zsh ]] && source /Users/ripta/.iterm2_shell_integration.zsh || true
+
+# rustup shell setup
+[[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env || true
