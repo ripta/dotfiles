@@ -16,13 +16,15 @@ ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
 
 DEFAULT_USER='rpasay'
-HISTSIZE=100000
+HISTFILESIZE=1000000000
+HISTSIZE=80000000
+SAVEHIST=80000000
 # DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
-# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
+# Custom plugins may be added to ./zsh-custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(docker encode64 fancy-ctrl-z jsontools osx redis-cli sprunge ssh-agent rvm bundler brew aws z)
+plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws z)
 plugins+=(bd direnv fleetctl gogo kube)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
