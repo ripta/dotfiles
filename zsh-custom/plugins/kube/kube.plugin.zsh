@@ -92,6 +92,7 @@ function __kubectl_get {
 
   local rsrc
   local has_sort_by=false
+  local has_verbose=false
   local output_idx=-1
   for ((i = 0; i <= $#args; i++))
   do
@@ -110,6 +111,11 @@ function __kubectl_get {
     if [[ ${args[$i]} == --sort-by ]] || [[ ${args[$i]} == --sort-by=* ]]
     then
       has_sort_by=true
+    fi
+
+    if [[ ${args[$i]} == -v=* ]]
+    then
+      has_verbose=true
     fi
   done
 
@@ -141,6 +147,9 @@ function __kubectl_get {
     fi
   fi
 
-  echo "❯ kubectl get ${args[@]}" >&2
+  if [[ $has_verbose == true ]]
+  then
+    echo "+ kubectl get ${args[@]}" >&2
+  fi
   command kubectl get "${args[@]}"
 }
