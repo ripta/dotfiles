@@ -1,2 +1,2 @@
-NAME            SERVICE-MESH                              PROXY-READINESS                                             SERVICE-ACCT
-.metadata.name  .metadata.annotations.linkerd\.io/inject  .status.containerStatuses[?(@.name=="linkerd-proxy")].ready .spec.serviceAccountName
+NAME            SERVICE-MESH                              PROXY-READINESS                                             CONTAINER-ID                                                      SERVICE-ACCT
+.metadata.name  .metadata.annotations.linkerd\.io/inject  .status.containerStatuses[?(@.name=="linkerd-proxy")].ready .status.containerStatuses[?(@.name=="linkerd-proxy")].containerID .spec.serviceAccountName
