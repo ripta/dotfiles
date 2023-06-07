@@ -65,3 +65,5 @@ fi
 
 # rustup shell setup
 [[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env || true
+
+alias vi=nvim
