@@ -91,10 +91,20 @@ function __kubectl_get {
   args=( "$@" )
 
   local rsrc
+
   local has_sort_by=false
+  local has_verbose=false
+  local namespace_idx=-1
   local output_idx=-1
+
   for ((i = 0; i <= $#args; i++))
   do
+    if [[ ${args[$i]} == -n ]] || [[ ${args[$i]} == --namespace ]]
+    then
+      namespace_idx=$((i + 1))
+      continue
+    fi
+
     if [[ ${args[$i]} == -o ]] || [[ ${args[$i]} == --output ]]
     then
       output_idx=$((i + 1))
@@ -110,6 +120,11 @@ function __kubectl_get {
     if [[ ${args[$i]} == --sort-by ]] || [[ ${args[$i]} == --sort-by=* ]]
     then
       has_sort_by=true
+    fi
+
+    if [[ ${args[$i]} == -v=* ]]
+    then
+      has_verbose=true
     fi
   done
 
@@ -130,6 +145,17 @@ function __kubectl_get {
     fi
   fi
 
+  if [[ ${namespace_idx} -ge 0 ]]
+  then
+    local namespace=${args[$namespace_idx]}
+    if [[ ${namespace} == */* ]]
+    then
+      namespace=${namespace//\//--}
+      namespace=${namespace//_/-}
+      args[$namespace_idx]=$namespace
+    fi
+  fi
+
   if [[ $has_sort_by == false ]]
   then
     if [[ $rsrc == ev* ]]
@@ -141,6 +167,9 @@ function __kubectl_get {
     fi
   fi
 
-  echo "❯ kubectl get ${args[@]}" >&2
+  if [[ $has_verbose == true ]]
+  then
+    echo "+ kubectl get ${args[@]}" >&2
+  fi
   command kubectl get "${args[@]}"
 }
