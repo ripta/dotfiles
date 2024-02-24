@@ -229,7 +229,7 @@
 
 # Matchy-matchy with my prompt.
 [format]
-    pretty = format:%Cgreen%h %Cblue%ae %Creset%s
+    pretty = format:%Cgreen%h %Cblue%G? %ae %Creset%s
 
 # GitHub settings
 [github]
