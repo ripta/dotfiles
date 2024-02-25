@@ -62,6 +62,22 @@ local function init(use)
     end,
   }
 
+  -- Package manager for LSP, DAP, linters, and formatters
+  use {
+    'williamboman/mason.nvim',
+    config = function()
+      require('mason').setup()
+    end,
+  }
+  use {
+    'williamboman/mason-lspconfig.nvim',
+    config = function()
+      require('mason-lspconfig').setup({
+        automatic_installation = true,
+      })
+    end,
+  }
+
   -- Pictograms for nvim's language server popups
   use { 'onsails/lspkind-nvim', event = 'VimEnter' }
 
