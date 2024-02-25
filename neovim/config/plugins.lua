@@ -127,12 +127,17 @@ local function init(use)
     config = function()
       require('nvim-treesitter.configs').setup({
         ensure_installed = {
-          'bash', 'c', 'cpp', 'css', 'diff',
+          -- Required since neovim-0.8.0 https://github.com/nvim-treesitter/nvim-treesitter/issues/3092
+          -- although 'help' is not available
+          'c', 'lua', 'vim',
+
+          -- Customized groups of languages
+          'bash', 'cpp', 'css', 'diff',
           'gitignore', 'go', 'graphql', 'html',
-          'java', 'javascript', 'json', 'lua',
+          'java', 'javascript', 'json',
           'markdown', 'perl', 'python', 'regex',
           'rust', 'sql', 'svelte', 'terraform', 'toml', 'tsx',
-          'typescript', 'vim', 'vimdoc', 'yaml',
+          'typescript', 'vimdoc', 'yaml',
         },
         sync_install = true,
         auto_install = true,
@@ -208,6 +213,16 @@ local function init(use)
         tabline = {},
         extensions = { 'nvim-tree' },
       })
+    end,
+  }
+
+  -- File tree explorer
+  use {
+    'nvim-tree/nvim-tree.lua',
+    requires = 'nvim-tree/nvim-web-devicons',
+    config = function()
+      require('nvim-tree').setup({})
+      vim.keymap.set('n', '<leader>ft', ':NvimTreeToggle<CR>', { desc = '[f]ile [t]ree' })
     end,
   }
 
