@@ -22,6 +22,9 @@ vim.g.mapleader = ','
 -- Disable mouse
 vim.opt.mouse = ''
 
+-- Enable line highlight
+vim.opt.cursorline = true
+
 -- Enable clipboard
 vim.opt.clipboard:append { 'unnamedplus' }
 
