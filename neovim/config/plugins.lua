@@ -191,7 +191,16 @@ local function init(use)
       vim.keymap.set('n', '<leader>ff', ts.find_files, { desc = '[f]uzzy [f]iles'   })
       vim.keymap.set('n', '<leader>fg', ts.live_grep,  { desc = '[f]uzzy [g]rep'    })
       vim.keymap.set('n', '<leader>fh', ts.oldfiles,   { desc = '[f]uzzy [h]istory' })
-    end
+    end,
+    defaults = {
+      file_ignore_patterns = {
+        ".git",
+        ".idea",
+        ".next",
+        "node_modules",
+        "yarn.lock",
+      },
+    },
   }
 
   -- Better vim.ui and vim.notify interfaces
