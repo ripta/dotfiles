@@ -28,6 +28,9 @@ vim.opt.scrolloff = 5
 -- Enable line highlight
 vim.opt.cursorline = true
 
+-- Mark column 120
+vim.opt.colorcolumn = "120"
+
 -- Enable clipboard
 vim.opt.clipboard:append { 'unnamedplus' }
 
