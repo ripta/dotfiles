@@ -42,3 +42,10 @@ nnoremap('<leader>0', ':set relativenumber!<cr>')
 -- nnoremap('<leader>dp', vim.diagnostic.goto_prev)
 -- nnoremap('<leader>dn', vim.diagnostic.goto_next)
 -- nnoremap('<leader>dq', vim.diagonstic.setloclist)
+
+-- Convenient find-and-replace of the word under the cursor
+nnoremap('<C-s>', function()
+  local line = ':%s/<C-r><C-w>/<C-r><C-w>/gI<Left><Left><Left>'
+  local keys = vim.api.nvim_replace_termcodes(line, true, false, true)
+  vim.api.nvim_feedkeys(keys, 'n', false)
+end)
