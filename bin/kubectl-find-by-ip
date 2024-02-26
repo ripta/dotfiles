@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+ip="${1-}"
+shift
+
+exec kubectl get pods --all-namespaces --field-selector=status.podIP="${ip}" "$@"
