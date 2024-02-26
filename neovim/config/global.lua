@@ -22,6 +22,9 @@ vim.g.mapleader = ','
 -- Disable mouse
 vim.opt.mouse = ''
 
+-- Keep a five-line offset in view when scrolling
+vim.opt.scrolloff = 5
+
 -- Enable line highlight
 vim.opt.cursorline = true
 
