@@ -96,7 +96,6 @@ local function init(use)
           { name = 'nvim_lua' },
           { name = 'buffer'   },
           { name = 'path'     },
-          { name = 'emoji'    },
         })
       })
     end,
@@ -105,7 +104,6 @@ local function init(use)
   use { 'hrsh7th/cmp-path',     after = 'nvim-cmp' }
   use { 'hrsh7th/cmp-buffer',   after = 'nvim-cmp' }
   use { 'hrsh7th/cmp-omni',     after = 'nvim-cmp' }
-  use { 'hrsh7th/cmp-emoji',    after = 'nvim-cmp' }
 
   -- Quickstart configs for nvim's language server
   use {
