@@ -202,7 +202,7 @@ local function init(use)
       require('lualine').setup({
         options = {
           icons_enabled = true,
-          theme = 'auto',
+          theme = 'solarized',
           section_separators = '',
           component_separators = '',
           disabled_filetypes = {},
