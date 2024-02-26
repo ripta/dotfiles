@@ -104,6 +104,13 @@ local function init(use)
   use { 'hrsh7th/cmp-path',     after = 'nvim-cmp' }
   use { 'hrsh7th/cmp-buffer',   after = 'nvim-cmp' }
   use { 'hrsh7th/cmp-omni',     after = 'nvim-cmp' }
+  use {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = function()
+        require("nvim-autopairs").setup()
+    end,
+  }
 
   -- Quickstart configs for nvim's language server
   use {
