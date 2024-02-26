@@ -111,6 +111,12 @@ local function init(use)
         require("nvim-autopairs").setup()
     end,
   }
+  use {
+    'numToStr/Comment.nvim',
+    config = function()
+      require('Comment').setup()
+    end,
+  }
 
   -- Quickstart configs for nvim's language server
   use {
