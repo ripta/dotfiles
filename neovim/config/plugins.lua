@@ -354,10 +354,10 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
   pattern = '*/neovim/config/plugins.lua',
   group = vim.api.nvim_create_augroup('packer_autocompile', { clear = true }),
   callback = function(ctx)
-      local cmd = 'source ' .. ctx.file
-      vim.cmd(cmd)
-      vim.cmd('PackerCompile')
-      vim.notify('PackerCompile succeeded', vim.log.levels.INFO, { title = 'plugins.lua' })
+    local cmd = 'source ' .. ctx.file
+    vim.cmd(cmd)
+    vim.cmd('PackerCompile')
+    vim.notify('PackerCompile succeeded', vim.log.levels.INFO, { title = 'plugins.lua' })
   end,
 })
 
