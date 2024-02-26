@@ -194,6 +194,20 @@ local function init(use)
     end
   }
 
+  -- Better vim.ui and vim.notify interfaces
+  use {
+    'stevearc/dressing.nvim',
+    config = function()
+      require('dressing').setup()
+    end,
+  }
+  use {
+    'rcarriga/nvim-notify',
+    config = function()
+      vim.notify = require('notify')
+    end,
+  }
+
   -- Snazzier statusline
   use {
     'nvim-lualine/lualine.nvim',
