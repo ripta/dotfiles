@@ -240,18 +240,18 @@ local function init(use)
           },
         },
         tabline = {},
-        extensions = { 'nvim-tree' },
+        extensions = { 'oil' },
       })
     end,
   }
 
   -- File tree explorer
   use {
-    'nvim-tree/nvim-tree.lua',
-    requires = 'nvim-tree/nvim-web-devicons',
+    'stevearc/oil.nvim',
     config = function()
-      require('nvim-tree').setup({})
-      vim.keymap.set('n', '<leader>ft', ':NvimTreeToggle<CR>', { desc = '[f]ile [t]ree' })
+      local oil = require('oil')
+      oil.setup()
+      vim.keymap.set('n', '<leader>ft', oil.open_float, { desc = '[f]ile [t]ree' })
     end,
   }
 
