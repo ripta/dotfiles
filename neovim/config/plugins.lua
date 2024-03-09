@@ -131,6 +131,7 @@ local function init(use)
       local cfg = require('lspconfig')
 
       cfg.gopls.setup {}
+      cfg.lua_ls.setup {}
       cfg.rust_analyzer.setup {
         settings = {
           ['rust-analyzer'] = {
