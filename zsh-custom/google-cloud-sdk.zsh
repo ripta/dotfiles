@@ -9,4 +9,5 @@ then
     # will use the bundled python in its ~/bin/google-cloud-sdk/platform.
     #
     # export CLOUDSDK_PYTHON=python
+    export CLOUDSDK_PYTHON=/usr/local/Cellar/python@3.11/3.11.6_1/bin/python3.11
 fi
