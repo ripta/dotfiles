@@ -42,24 +42,11 @@ local function init(use)
   -- Packer can manage packer
   use { 'wbthomason/packer.nvim', opt = true }
 
-  -- Solarized colorscheme
-  use {
-    'maxmx03/solarized.nvim',
-    config = function()
-      vim.opt.background = 'dark'
-      vim.cmd.colorscheme('solarized')
-    end,
-  }
   use { 'tjdevries/colorbuddy.nvim' }
   use {
-    'svrana/neosolarized.nvim',
+    'catppuccin/nvim',
+    as = 'catpuccin',
     after = 'colorbuddy.nvim',
-    config = function()
-      local neo = require('neosolarized').setup({
-        background_set = true,
-      })
-      neo.Group.link('WarningMsg', neo.groups.Comment)
-    end,
   }
 
   -- Package manager for LSP, DAP, linters, and formatters
@@ -225,7 +212,7 @@ local function init(use)
       require('lualine').setup({
         options = {
           icons_enabled = true,
-          theme = 'solarized',
+          theme = 'tomorrow',
           section_separators = '',
           component_separators = '',
           disabled_filetypes = {},
@@ -285,7 +272,7 @@ local function init(use)
   }
   use {
     'akinsho/bufferline.nvim',
-    tag = 'v3.*',
+    branch = 'main',
     requires = 'nvim-tree/nvim-web-devicons',
     config = function()
       require('bufferline').setup({
