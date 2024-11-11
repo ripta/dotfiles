@@ -24,7 +24,7 @@ SAVEHIST=80000000
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ./zsh-custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws z)
+plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws_new z)
 plugins+=(bd direnv fleetctl gogo kube gpg-agent)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
