@@ -112,6 +112,8 @@ local function init(use)
     config = function()
       local cfg = require('lspconfig')
 
+      -- dagger provides an lsp for cuelang
+      cfg.dagger.setup {}
       cfg.gopls.setup {}
       cfg.rust_analyzer.setup {
         settings = {
