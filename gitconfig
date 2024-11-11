@@ -209,7 +209,7 @@
 # Set the darn editor and pager, which unfortunately don't always get picked
 # up in some versions of git.
 [core]
-    editor = vim
+    editor = nvim
     excludesfile = ~/.dotfiles/gitignore
     pager = $PAGER -FX
     preloadindex = true
