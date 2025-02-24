@@ -86,7 +86,9 @@ function prompt_kube_plugin() {
 #    sets output format to use it if it exists.
 # 2. "kc get foo -o ^bar" looks for the custom-columns template "bar.tpl"
 #    and sets the output format to it if it exists.
-# 3. "kc get foo" sets a default --sort-by unless one was provided.
+# 3. "kc get foo -o .bar" replaces the output format with "-o json" and pipes
+#    to jq automatically, passing ".bar".
+# 4. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
   args=( "$@" )
 
