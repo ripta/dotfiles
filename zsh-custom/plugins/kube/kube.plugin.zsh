@@ -86,7 +86,9 @@ function prompt_kube_plugin() {
 #    sets output format to use it if it exists.
 # 2. "kc get foo -o ^bar" looks for the custom-columns template "bar.tpl"
 #    and sets the output format to it if it exists.
-# 3. "kc get foo" sets a default --sort-by unless one was provided.
+# 3. "kc get foo -o .bar" replaces the output format with "-o json" and pipes
+#    to jq automatically, passing ".bar".
+# 4. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
   args=( "$@" )
 
@@ -96,6 +98,7 @@ function __kubectl_get {
   local has_verbose=false
   local namespace_idx=-1
   local output_idx=-1
+  local pipe_cmd=()
 
   for ((i = 0; i <= $#args; i++))
   do
@@ -111,20 +114,22 @@ function __kubectl_get {
       continue
     fi
 
-    if [[ -z ${rsrc} ]]
-    then
-      rsrc="${args[$i]}"
-      continue
-    fi
-
     if [[ ${args[$i]} == --sort-by ]] || [[ ${args[$i]} == --sort-by=* ]]
     then
       has_sort_by=true
+      continue
     fi
 
     if [[ ${args[$i]} == -v=* ]]
     then
       has_verbose=true
+      continue
+    fi
+
+    if [[ -z ${rsrc} ]]
+    then
+      rsrc="${args[$i]}"
+      continue
     fi
   done
 
@@ -134,6 +139,10 @@ function __kubectl_get {
     then
       tplfile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#^}.tpl"
       args[$output_idx]="custom-columns-file=${tplfile}"
+    elif [[ ${args[$output_idx]} == .* ]]
+    then
+      pipe_cmd=( "jq" "-r" "${args[$output_idx]}" )
+      args[$output_idx]="json"
     fi
   elif [[ -n ${rsrc} ]]
   then
@@ -169,7 +178,18 @@ function __kubectl_get {
 
   if [[ $has_verbose == true ]]
   then
-    echo "+ kubectl get ${args[@]}" >&2
+    if [[ ${#pipe_cmd[@]} -eq 0 ]]
+    then
+      echo "+ kubectl get ${args[@]}" >&2
+    else
+      echo "+ kubectl get ${args[@]} | ${pipe_cmd[@]}" >&2
+    fi
   fi
-  command kubectl get "${args[@]}"
+
+  if [[ ${#pipe_cmd[@]} -eq 0 ]]
+  then
+    command kubectl get "${args[@]}"
+  else
+    command kubectl get "${args[@]}" | "${pipe_cmd[@]}"
+  fi
 }
