@@ -1,10 +1,10 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
-# author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2023-01-06T19:44:38-0800
+# author: Ripta Pasay <ripta@users.noreply.github.com>
+# last-modified: 2025-02-24T02:06:36-0800
 # ---
 
-# Stop giving me noob warnings; I know what a non-ff push is, and I know what
+# Stop giving me warnings; I know what a non-ff push is, and I know what
 # unstaged changes are. Set these to true for more user-friendly messages.
 [advice]
     commitBeforeMerge = false
@@ -184,6 +184,7 @@
 # git, this is here to emulate the behavior in older ones.
 [branch]
     autosetupmerge = true
+    sort = committerdate
 
 # Color output whenever possible with special colors to make it look nice
 # against the "solarized" color scheme.
@@ -216,7 +217,8 @@
 
 # Diffing settings galore.
 [diff]
-    algorithm = patience
+    algorithm = histogram       ; histogram is "patience" plus preference of
+                                ; rare lines first
     mnemonicprefix = true       ; diffs should show location instead of generic
                                 ; a, b filenames
     renames = copies            ; renames should be treated as copies
@@ -226,6 +228,19 @@
     prompt = true               ; always ask by default
 [difftool "Kaleidoscope.app"]
     cmd = ksdiff-wrapper git \"$LOCAL\" \"$REMOTE\"
+
+[fetch]
+    # I opt not to set prune=true or pruneTags=true to not automatically prune
+    # on fetch, since I'd prefer having the refs around than automatically
+    # throwing it away.
+    #
+    # prune = true
+    # pruneTags = true
+
+    # I also don't care about fetching all remotes, since I work with large
+    # monorepos, with multiple remotes.
+    #
+    # all = true
 
 # Matchy-matchy with my prompt.
 [format]
@@ -245,7 +260,8 @@
 
 # Merge settings and tools.
 [merge]
-    conflictstyle = diff3
+    conflictstyle = zdiff3      ; like "diff3" but remove matching lines in
+                                ; the conflict region
     stat = true                 ; always show a diffstat after a merge
     tool = vimdiff
 [mergetool]
@@ -256,11 +272,13 @@
 
 # Push the current branch to the upstream branch
 [push]
-    default = upstream
+    default = upstream          ; push current branch back to @{upstream}
+    autoSetupRemote = true      ; assume --set-upstream when one doesn't exist
 
-# Just-don't-even autostash before rebasing.
+# Just-don't-even autostash before rebasing, but autosquash when in `rebase -i`
 [rebase]
     autoStash = false
+    autoSquash = true
 
 # Prefer smaller packed objects, even if it means no love for git before 1.4.4.
 # Also no love for: http and rsync repositories.
