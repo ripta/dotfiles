@@ -1,10 +1,10 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
-# author: Ripta Pasay <rpasay@git.r8y.org>
-# last-modified: 2023-01-06T19:44:38-0800
+# author: Ripta Pasay <ripta@users.noreply.github.com>
+# last-modified: 2025-02-24T02:06:36-0800
 # ---
 
-# Stop giving me noob warnings; I know what a non-ff push is, and I know what
+# Stop giving me warnings; I know what a non-ff push is, and I know what
 # unstaged changes are. Set these to true for more user-friendly messages.
 [advice]
     commitBeforeMerge = false
@@ -184,7 +184,7 @@
 # git, this is here to emulate the behavior in older ones.
 [branch]
     autosetupmerge = true
-    sort = -committerdate
+    sort = committerdate
 
 # Color output whenever possible with special colors to make it look nice
 # against the "solarized" color scheme.
