@@ -77,7 +77,7 @@ function prompt_kube_plugin() {
   [[ -n "$KUBECONFIG" ]] || return
   cfg="$(echo "$KUBECONFIG" | awk -F: '{print $1}')"
   name="$(basename $cfg)"
-  p10k segment -s NORMAL -r -i KUBERNETES_ICON -b blue -f white -t "$name"
+  p10k segment -s NORMAL -r -i KUBERNETES_ICON -b black -f white -t "$name"
 }
 
 

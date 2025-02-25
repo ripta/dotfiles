@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # Path to your oh-my-zsh configuration.
 DOTFILES=$HOME/.dotfiles
 ZSH=$DOTFILES/modules/oh-my-zsh
@@ -24,7 +31,7 @@ SAVEHIST=80000000
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ./zsh-custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws z)
+plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws_new z)
 plugins+=(bd direnv fleetctl gogo kube gpg-agent)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
