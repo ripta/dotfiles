@@ -163,4 +163,7 @@ config.keys = {
   { key = 'Paste', mods = 'NONE', action = act.PasteFrom 'Clipboard' },
 }
 
+config.send_composed_key_when_left_alt_is_pressed = true
+config.send_composed_key_when_right_alt_is_pressed = false
+
 return config
