@@ -163,6 +163,9 @@ config.keys = {
   { key = 'Paste', mods = 'NONE', action = act.PasteFrom 'Clipboard' },
 }
 
+config.enable_scroll_bar = true
+config.scrollback_lines = 20480
+
 config.send_composed_key_when_left_alt_is_pressed = true
 config.send_composed_key_when_right_alt_is_pressed = false
 
@@ -170,6 +173,7 @@ config.show_new_tab_button_in_tab_bar = false
 
 if wezterm.target_triple == 'aarch64-apple-darwin' or wezterm.target_triple == 'x86_64-apple-darwin' then
   config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
+  -- config.tab_bar_at_bottom = true
 end
 
 return config
