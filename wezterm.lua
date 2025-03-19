@@ -168,4 +168,8 @@ config.send_composed_key_when_right_alt_is_pressed = false
 
 config.show_new_tab_button_in_tab_bar = false
 
+if wezterm.target_triple == 'aarch64-apple-darwin' or wezterm.target_triple == 'x86_64-apple-darwin' then
+  config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
+end
+
 return config
