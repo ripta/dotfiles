@@ -90,7 +90,7 @@ config.keys = {
   { key = 'N', mods = 'CTRL', action = act.SpawnWindow },
   { key = 'N', mods = 'SHIFT|CTRL', action = act.SpawnWindow },
   -- { key = 'P', mods = 'CTRL', action = act.ActivateCommandPalette },
-  -- { key = 'P', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
+  { key = 'P', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
   { key = 'Q', mods = 'CTRL', action = act.QuitApplication },
   { key = 'Q', mods = 'SHIFT|CTRL', action = act.QuitApplication },
   { key = 'R', mods = 'CTRL', action = act.ReloadConfiguration },
@@ -162,5 +162,18 @@ config.keys = {
   { key = 'Copy', mods = 'NONE', action = act.CopyTo 'Clipboard' },
   { key = 'Paste', mods = 'NONE', action = act.PasteFrom 'Clipboard' },
 }
+
+config.enable_scroll_bar = true
+config.scrollback_lines = 20480
+
+config.send_composed_key_when_left_alt_is_pressed = true
+config.send_composed_key_when_right_alt_is_pressed = false
+
+config.show_new_tab_button_in_tab_bar = false
+
+if wezterm.target_triple == 'aarch64-apple-darwin' or wezterm.target_triple == 'x86_64-apple-darwin' then
+  config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
+  -- config.tab_bar_at_bottom = true
+end
 
 return config

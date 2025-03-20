@@ -32,7 +32,7 @@ SAVEHIST=80000000
 # Custom plugins may be added to ./zsh-custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws_new z)
-plugins+=(bd direnv fleetctl gogo kube gpg-agent)
+plugins+=(bd direnv fleetctl gogo kube gpg-agent jump)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
 zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa
