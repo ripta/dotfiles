@@ -90,7 +90,7 @@ config.keys = {
   { key = 'N', mods = 'CTRL', action = act.SpawnWindow },
   { key = 'N', mods = 'SHIFT|CTRL', action = act.SpawnWindow },
   -- { key = 'P', mods = 'CTRL', action = act.ActivateCommandPalette },
-  -- { key = 'P', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
+  { key = 'P', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
   { key = 'Q', mods = 'CTRL', action = act.QuitApplication },
   { key = 'Q', mods = 'SHIFT|CTRL', action = act.QuitApplication },
   { key = 'R', mods = 'CTRL', action = act.ReloadConfiguration },
