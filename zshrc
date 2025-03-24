@@ -35,7 +35,7 @@ plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler br
 plugins+=(bd direnv fleetctl gogo kube gpg-agent jump)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
-zstyle :omz:plugins:ssh-agent identities id_ed25519 id_rsa
+zstyle :omz:plugins:ssh-agent identities id_ed25519
 
 # Goodness, that's annoying.
 unsetopt correct_all
