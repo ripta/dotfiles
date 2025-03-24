@@ -103,7 +103,7 @@ config.keys = {
   { key = 'V', mods = 'SHIFT|CTRL', action = act.PasteFrom 'Clipboard' },
   { key = 'W', mods = 'CTRL', action = act.CloseCurrentTab{ confirm = true } },
   { key = 'W', mods = 'SHIFT|CTRL', action = act.CloseCurrentTab{ confirm = true } },
-  { key = 'X', mods = 'CTRL', action = act.ActivateCopyMode },
+  -- { key = 'X', mods = 'CTRL', action = act.ActivateCopyMode },
   { key = 'X', mods = 'SHIFT|CTRL', action = act.ActivateCopyMode },
   { key = 'Z', mods = 'CTRL', action = act.TogglePaneZoomState },
   { key = 'Z', mods = 'SHIFT|CTRL', action = act.TogglePaneZoomState },
