@@ -164,6 +164,15 @@ config.keys = {
   { key = 'Copy', mods = 'NONE', action = act.CopyTo 'Clipboard' },
   { key = 'Paste', mods = 'NONE', action = act.PasteFrom 'Clipboard' },
 }
+config.mouse_bindings = {
+  {
+    event = {
+      Down = { streak = 4, button = 'Left' },
+    },
+    action = act.SelectTextAtMouseCursor 'SemanticZone',
+    mods = 'NONE',
+  }
+}
 
 config.enable_scroll_bar = true
 config.scrollback_lines = 20480
