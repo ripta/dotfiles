@@ -2,6 +2,25 @@
 
 whoami = sts get-caller-identity
 
+info = !f() {
+    env | sort | grep -e AWS_ -e SHLVL | cat
+  }; f
+
+login = sso login
+
+logout = sso logout
+
+relog = !f() {
+    aws sso logout
+    aws sso login
+  }; f
+
+switch = !aws-choose-profile
+
+profiles = !f() {
+    aws configure list-profiles | sort
+  }; f
+
 zone-by-name = !f() {
     aws route53 list-hosted-zones-by-name \
         --max-items 1 \

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+choose-profile() {
+  local selections
+  selections="$(render-options)" || return 1
+  fzf --ansi <<<"${selections}"
+}
+
+# list-kubeconfigs-for $profile
+#
+# Given an AWS profile "foo-bar", find all kubeconfigs with the string "-foo-"
+# in the filename.
+list-kubeconfigs-for() {
+  local profile="$1"
+  if [[ -d "${HOME}/.kube/configs" ]]
+  then
+    (
+      cd "${HOME}/.kube/configs" || return
+      ls -- *-"$(echo "${profile}" | cut -d- -f1)"-* 2>/dev/null
+    )
+  fi
+}
+
+# list-profiles
+#
+# List all known AWS profiles in `~/.aws/config`.
+list-profiles() {
+  aws configure list-profiles | sort
+}
+
+render-options() {
+  local kubeconfigs kubeconfig
+  list-profiles \
+    | while read -r profile
+    do
+      kubeconfigs=$(list-kubeconfigs-for "${profile}")
+      echo "${kubeconfigs}"| while read -r kubeconfig
+        do
+          printf "%s\t%s\n" "${profile}" "${kubeconfig}"
+        done
+    done | column -t -s$'\t'
+}
+
+sel="$(choose-profile)"
+[[ -n "${sel}" ]] || {
+  echo "No profile chosen. Exiting." >&2
+  exit 1
+}
+
+use_profile="$(echo "${sel}" | awk '{print $1}')"
+use_kubeconfig="$(echo "${sel}" | awk '{print $2}')"
+[[ -n "${use_kubeconfig}" ]] && use_kubeconfig="${HOME}/.kube/configs/${use_kubeconfig}"
+
+set -x
+exec env "AWS_PROFILE=${use_profile}" "KUBECONFIG=${use_kubeconfig}" "${SHELL:-bash}"
