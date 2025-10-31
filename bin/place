@@ -1,0 +1,128 @@
+#!/usr/bin/env swift
+
+import Foundation
+import CoreLocation
+
+class LocationManager: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    private var gotLocation = false
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+
+    func requestLocation() {
+        let status = manager.authorizationStatus
+
+        if status == .notDetermined {
+            print("Requesting location authorization...")
+            manager.requestWhenInUseAuthorization()
+        }
+
+        manager.requestLocation()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last, !gotLocation else { return }
+        gotLocation = true
+
+        print("Location Data:")
+        print("─────────────────────────────────────────")
+        print("Latitude:           \(location.coordinate.latitude)°")
+        print("Longitude:          \(location.coordinate.longitude)°")
+        print("Altitude:           \(location.altitude) meters")
+        print("Horizontal Accuracy: \(location.horizontalAccuracy) meters")
+        print("Vertical Accuracy:   \(location.verticalAccuracy) meters")
+
+        if location.speed >= 0 {
+            print("Speed:              \(location.speed) m/s (\(location.speed * 3.6) km/h)")
+        }
+
+        if location.course >= 0 {
+            print("Course:             \(location.course)°")
+        }
+
+        if #available(macOS 10.15, *) {
+            if let floor = location.floor {
+                print("Floor:              \(floor.level)")
+            }
+        }
+
+        print("Timestamp:          \(location.timestamp)")
+        print("─────────────────────────────────────────")
+
+        print("\nFormatted Coordinates:")
+        print("DMS: \(formatDMS(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude))")
+        print("Google Maps: https://www.google.com/maps?q=\(location.coordinate.latitude),\(location.coordinate.longitude)")
+
+        exit(0)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Error getting location: \(error.localizedDescription)")
+
+        if let clError = error as? CLError {
+            switch clError.code {
+            case .denied:
+                print("\nLocation services denied. Please enable location access for Terminal in System Preferences > Security & Privacy > Privacy > Location Services")
+            case .locationUnknown:
+                print("\nLocation unknown - trying again...")
+                return
+            default:
+                print("\nError code: \(clError.code.rawValue)")
+            }
+        }
+
+        exit(1)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+
+        switch status {
+        case .notDetermined:
+            print("Authorization not determined")
+        case .restricted:
+            print("Location services restricted")
+            exit(1)
+        case .denied:
+            print("Location services denied")
+            exit(1)
+        case .authorizedAlways, .authorizedWhenInUse:
+            print("Location authorized, getting location...")
+        @unknown default:
+            print("Unknown authorization status")
+        }
+    }
+
+    private func formatDMS(latitude: Double, longitude: Double) -> String {
+        let latDMS = coordinateToDMS(coordinate: latitude, isLatitude: true)
+        let lonDMS = coordinateToDMS(coordinate: longitude, isLatitude: false)
+        return "\(latDMS), \(lonDMS)"
+    }
+
+    private func coordinateToDMS(coordinate: Double, isLatitude: Bool) -> String {
+        let absolute = abs(coordinate)
+        let degrees = Int(absolute)
+        let minutesDecimal = (absolute - Double(degrees)) * 60
+        let minutes = Int(minutesDecimal)
+        let seconds = (minutesDecimal - Double(minutes)) * 60
+
+        let direction: String
+        if isLatitude {
+            direction = coordinate >= 0 ? "N" : "S"
+        } else {
+            direction = coordinate >= 0 ? "E" : "W"
+        }
+
+        return String(format: "%d°%d'%.2f\"%@", degrees, minutes, seconds, direction)
+    }
+}
+
+let locationManager = LocationManager()
+print("Getting current location...")
+locationManager.requestLocation()
+
+RunLoop.main.run()
