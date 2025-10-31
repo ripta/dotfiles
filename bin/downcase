@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#
+# Lowercase the input.
+#
+# Usage: downcase
+
+exec tr '[:upper:]' '[:lower:]'
