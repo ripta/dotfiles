@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#
+# Opens a Kagi query in the browser. You don't even need to quote spaces.
+#
+# Usage: kagi [query...]
+#
+# Example: kagi hello world
+
+set -euo pipefail
+
+LAUNCHER="${LAUNCHER:-open}"
+
+if [[ $# -eq 0 ]]
+then
+  exec "${LAUNCHER}" "https://kagi.com"
+else
+  args="$*"
+  query="${args// /+}"
+  exec "${LAUNCHER}" "https://kagi.com/search?q=${query}"
+fi
