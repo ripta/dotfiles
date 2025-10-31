@@ -73,6 +73,7 @@
     fpo = fetch --prune origin  ;   and prune deleted branches
     fu = fetch upstream         ;   for a secondary remote
     gca = gc --aggressive       ; explicitly run garbage collection and repacking
+    gi = grep --ignore-case     ; grep case insensitively
     l = log                     ; logs of current branch
     lc = local-commits          ;   unpushed changes - required git-local-commits
     ld = log --pretty=oneline --decorate

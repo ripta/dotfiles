@@ -16,13 +16,15 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # CASE_SENSITIVE="true"
 DISABLE_AUTO_UPDATE="true"
+# DISABLE_MAGIC_FUNCTIONS="true"
+# ZSH_DISABLE_COMPFIX="true"
 # export UPDATE_ZSH_DAYS=13
 # DISABLE_LS_COLORS="true"
 # DISABLE_AUTO_TITLE="true"
 ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
 
-DEFAULT_USER='rpasay'
+DEFAULT_USER='ripta'
 HISTFILESIZE=1000000000
 HISTSIZE=80000000
 SAVEHIST=80000000
@@ -32,7 +34,7 @@ SAVEHIST=80000000
 # Custom plugins may be added to ./zsh-custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 plugins=(docker encode64 fancy-ctrl-z jsontools sprunge ssh-agent rvm bundler brew aws_new z)
-plugins+=(bd direnv fleetctl gogo kube gpg-agent jump)
+plugins+=(bd direnv fleetctl gogo kube gpg-agent jump nextjs)
 
 zstyle :omz:plugins:ssh-agent agent-forwarding on
 zstyle :omz:plugins:ssh-agent identities id_ed25519
