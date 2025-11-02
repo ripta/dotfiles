@@ -167,7 +167,7 @@ function __kubectl_get {
 
   if [[ $has_sort_by == false ]]
   then
-    if [[ $rsrc == ev* ]]
+    if [[ $rsrc == ev ]] || [[ $rsrc == event ]] || [[ $rsrc == events ]]
     then
       args=( "${args[@]}" "--sort-by=.lastTimestamp" )
     elif [[ $rsrc == no ]] || [[ $rsrc == nodes ]] || [[ $rsrc == rs ]]

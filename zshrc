@@ -12,7 +12,12 @@ ZSH_CUSTOM=$DOTFILES/zsh-custom
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
-ZSH_THEME="powerlevel10k/powerlevel10k"
+if [[ "$TERM_PROGRAM" == "vscode" ]]; then
+  ZSH_THEME=""  # Disable Powerlevel10k for Cursor
+else
+  ZSH_THEME="powerlevel10k/powerlevel10k"
+fi
+
 
 # CASE_SENSITIVE="true"
 DISABLE_AUTO_UPDATE="true"
