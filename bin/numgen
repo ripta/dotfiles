@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# Generate a numstring of a specific length (10 by default). "Numstring" here,
+# because they can start with zeros, and are intended to be treated as a
+# string, not as a number.
+
+shuf -i 0-9 -r -n "${1:-10}" | tr -d '\n'
+echo
