@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#
+# Replace curly quotes from STDIN with straight quotes.
+
+# shellcheck disable=SC1112
+exec sed 's/[“”]/"/g; s/[‘’]/'"'"'/g'
