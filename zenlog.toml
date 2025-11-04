@@ -1,0 +1,35 @@
+ZENLOG_START_COMMAND = "exec $SHELL -l"
+
+# Log output directory.
+ZENLOG_DIR = "$HOME/zenlog/"
+
+# Prefix commands are ignored when command lines are parsed;
+# for example "sudo cat" will considered to be a "cat" command.
+ZENLOG_PREFIX_COMMANDS = "(?:command|builtin|time|sudo|[a-zA-Z0-9_]+=.*)"
+
+# Always do not log output from these commands.
+# You might also want to add commands like: more, less, ssh, ...
+ZENLOG_ALWAYS_NO_LOG_COMMANDS = "(?:vim?|man|nano|pico|emacs|htop|zenlog.*)"
+
+# Uncomment this to get zenlog to always flush the log files.
+#ZENLOG_AUTO_FLUSH=1
+
+# Uncomment this to switch back to use the basic command line parser, in case
+# the default one doesn't work.
+#ZENLOG_USE_EXPERIMENTAL_COMMAND_PARSER=false
+#ZENLOG_COMMAND_SPLITTER = '\s*(?:\;|\|\&|\|\||\||&&|\(|\)|{|})\s*'
+#ZENLOG_COMMENT_SPLITTER = '(?:^|[\;\|\&\(\)\{\}]|\s+)\#\s*'
+
+#ZENLOG_MAXPROC=1
+
+# If the shell finishes with non-zero status code within this second,
+# zenlog will start /bin/sh. Default is 30 seconds.
+#ZENLOG_CRITICAL_CRASH_MAX_SECONDS=5
+
+# Use splice(2) to copy FDs.
+#ZENLOG_USE_SPLICE=false
+
+# Zenlog source directory. When zenlog is installed with "go get", the source directory is
+# automatically detected, but when building zenlog from a local source repository, set this
+# so zenlog can find the standard subcommands in the source directory.
+#ZENLOG_SOURCE_DIR = "$HOME/cbin/src/go/zenlog"
