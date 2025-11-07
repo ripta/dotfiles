@@ -1,0 +1,58 @@
+#!/usr/bin/env swift
+
+import CoreServices
+import Foundation
+
+func printDefinition(for word: String) {
+  let trimmedWord = word.trimmingCharacters(in: .whitespacesAndNewlines)
+  guard !trimmedWord.isEmpty else {
+    return
+  }
+
+  let range = DCSGetTermRangeInString(nil, trimmedWord as CFString, 0)
+  if range.location == kCFNotFound {
+    let programName = URL(fileURLWithPath: CommandLine.arguments[0]).lastPathComponent
+    FileHandle.standardError.write(
+      "\(programName): no definition for \(trimmedWord)\n".data(using: .utf8)!)
+  } else {
+    if let definition = DCSCopyTextDefinition(nil, trimmedWord as CFString, range) {
+      print(definition.takeRetainedValue() as String)
+    }
+  }
+}
+
+func printUsage() {
+  let programName = URL(fileURLWithPath: CommandLine.arguments[0]).lastPathComponent
+  print(
+    """
+    Usage: \(programName) [-h] [word ...]
+
+    Look up definitions for the specified words. If no words are provided,
+    enters interactive mode.
+    """)
+}
+
+let arguments = CommandLine.arguments.dropFirst()
+if arguments.isEmpty {
+  FileHandle.standardError.write("Entering interactive mode. Press ^D to exit.\n".data(using: .utf8)!)
+  while true {
+    FileHandle.standardError.write("dict> ".data(using: .utf8)!)
+    guard let line = readLine() else {
+      break
+    }
+    printDefinition(for: line)
+  }
+} else {
+  for arg in arguments {
+    if arg.hasPrefix("-") {
+      switch arg {
+      case "-h":
+        printUsage()
+      default:
+        break
+      }
+    } else {
+      printDefinition(for: arg)
+    }
+  }
+}
