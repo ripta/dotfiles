@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# Make thumbnails out of some video file, with change threshold detection.
+
+set -euo pipefail
+
+THRESHOLD=0.1
+OUTPUT_DIR="thumbs"
+
+while getopts "o:t:h" opt; do
+  # shellcheck disable=SC2249
+  case ${opt} in
+    o)
+      OUTPUT_DIR="${OPTARG}"
+      ;;
+    t)
+      THRESHOLD="${OPTARG}"
+      ;;
+    h)
+      echo "Usage: $0 [-o output_dir] [-t threshold] <input_file>" >&2
+      echo "Options:" >&2
+      echo "  -o output_dir   Directory to save thumbnails (default: thumbs)" >&2
+      echo "  -t threshold    Scene change threshold (default: 0.1)" >&2
+      echo "  -h              Show this help message" >&2
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -${OPTARG}. Use -h for help." >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -${OPTARG} requires an argument" >&2
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND - 1))
+
+INPUT_FILE="$1"
+if [[ -z "${INPUT_FILE:-}" ]]
+then
+  echo "Error: Missing input file argument. Use -h for help." >&2
+  exit 1
+fi
+
+if [[ ! -f "${INPUT_FILE}" ]]
+then
+  echo "Error: Input file '${INPUT_FILE}' not found" >&2
+  exit 1
+fi
+
+mkdir -p "${OUTPUT_DIR}"
+
+exec ffmpeg \
+  -i "${INPUT_FILE}" \
+  -filter:v "select='gt(scene,${THRESHOLD})',showinfo" \
+  -f image2 \
+  -vsync vfr \
+  -frame_pts true \
+  "${OUTPUT_DIR}/%05d.png"

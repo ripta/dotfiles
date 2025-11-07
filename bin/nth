@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# Give you the n-th line out of STDIN.
+#
+# Usage: nth <number>
+#
+# Examples: nth 12 < file.txt
+#           some_command | nth 12
+
+set -eu
+head -n "${1:-1}" | tail -1

@@ -1,0 +1,45 @@
+#!/usr/bin/env swift
+
+import Foundation
+import Vision
+
+if CommandLine.arguments.count != 2 {
+  fputs("Usage: ocr <path_to_image>\n", stderr)
+  exit(1)
+}
+
+let arg = CommandLine.arguments[1]
+if arg == "-h" || arg == "--help" {
+  print("Usage: ocr <path_to_image>")
+  print("")
+  print("Extract text from an image using the Vision framework.")
+  print("")
+  print("Arguments:")
+  print("  <path_to_image>  Path to the image file to process")
+  print("")
+  print("Options:")
+  print("  -h, --help       Show this help message and exit")
+  exit(0)
+}
+
+let path = URL(fileURLWithPath: arg)
+guard FileManager.default.fileExists(atPath: path.path) else {
+  fputs("Error: file does not exist: \(path.path)\n", stderr)
+  exit(1)
+}
+
+var recognizeTextRequest = RecognizeTextRequest()
+recognizeTextRequest.automaticallyDetectsLanguage = true
+recognizeTextRequest.usesLanguageCorrection = true
+recognizeTextRequest.recognitionLevel = .accurate
+
+guard let observations = try? await recognizeTextRequest.perform(on: path) else {
+  fputs("Error: couldn't perform text recognition\n", stderr)
+  exit(2)
+}
+
+for observation in observations {
+  if let candidate = observation.topCandidates(1).first {
+    print(candidate.string)
+  }
+}

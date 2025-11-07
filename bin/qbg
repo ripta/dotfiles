@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# Execute some command quietly in the background.
+#
+# Usage: qbg some-noisy-command-that-has-no-chill
+
+set -eu
+
+if test -t 1
+then
+  exec 1>/dev/null
+fi
+
+if test -t 2
+then
+  exec 2>/dev/null
+fi
+
+"$@" &
