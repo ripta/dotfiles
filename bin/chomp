@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# Remove trailing newline from STDIN.
+
+exec perl -pe 'chomp if eof'
