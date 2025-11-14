@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# Parse a URL from STDIN into a JSON structure.
+
+exec fq -Rsr from_url
