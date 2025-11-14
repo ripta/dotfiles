@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# Parse JWT into a JSON structure.
+
+exec jq -Rr 'split(".") | {
+  header: (.[0] | @base64d | fromjson),
+  payload: (.[1] | @base64d | fromjson | 
+    with_entries(
+      if (.key | test("^(iat|exp|nbf|auth_time)$")) and (.value | type == "number") 
+      then .value |= todate 
+      else . 
+      end
+    )
+  ),
+  signature: .[2]
+}'
