@@ -138,6 +138,12 @@ function __kubectl_get {
     if [[ ${args[$output_idx]} == ^* ]]
     then
       tplfile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#^}.tpl"
+      if [[ ! -f ${tplfile} ]]
+      then
+        echo "Error: template file not found ${tplfile}" >&2
+        return 1
+      fi
+
       args[$output_idx]="custom-columns-file=${tplfile}"
     elif [[ ${args[$output_idx]} == .* ]]
     then
@@ -147,7 +153,6 @@ function __kubectl_get {
   elif [[ -n ${rsrc} ]]
   then
     tplfile="${DOTFILES}/zsh-custom/plugins/kube/templates/${rsrc}.tpl"
-    #echo "RSRC($rsrc}: ${tplfile}" >&2
     if [[ -f ${tplfile} ]]
     then
       args=( "${args[@]}" "-o" "custom-columns-file=${tplfile}" )
