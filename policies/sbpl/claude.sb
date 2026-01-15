@@ -1,0 +1,37 @@
+(version 1)
+(deny default)
+
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/common.sb"))
+
+;; (allow file-read* file-write* file-ioctl (literal "/dev/dtracehelper"))
+
+(allow file-read*
+       (home-subpath "/Library/Application Support")
+       (home-literal "/Library/Keychains/login.keychain-db")
+       (home-subpath "/Library/Preferences"))
+
+(allow file-read*
+       file-map-executable
+       process-exec
+       (subpath "/opt/homebrew/bin")
+       (subpath "/opt/homebrew/sbin")
+       (subpath "/opt/homebrew/opt/libpq/bin")
+       (subpath "/opt/homebrew/Caskroom/claude-code")
+       (home-subpath "/Public/Screenshots"))
+
+(allow file-read*
+       file-write*
+       (home-subpath "/.claude")
+       (home-literal "/.claude.json")
+       (home-prefix "/.claude.json.")
+       (subpath "/private/tmp"))
+
+(allow mach-lookup
+       (global-name "com.apple.diagnosticd")
+       (global-name "com.apple.FSEvents")
+       (global-name "com.apple.SecurityServer")
+       (global-name "com.apple.securityd.xpc")
+       (global-name "com.apple.security.agent")
+       (global-name "com.apple.securityd"))
+
+(allow network-outbound)

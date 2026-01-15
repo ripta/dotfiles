@@ -1,0 +1,74 @@
+(version 1)
+(deny default)
+
+(import "com.apple.corefoundation.sb")
+(corefoundation)
+
+(import "dyld-support.sb")
+
+(define (home-regex home-relative-regex)
+        (regex
+          (string-append "^" (regex-quote (param "HOME")) home-relative-regex)))
+
+(define (home-subpath home-relative-subpath)
+        (subpath (string-append (param "HOME") home-relative-subpath)))
+
+(define (home-prefix home-relative-prefix)
+        (prefix (string-append (param "HOME") home-relative-prefix)))
+
+(define (home-literal home-relative-literal)
+        (literal (string-append (param "HOME") home-relative-literal)))
+
+(define (project-subpath) (subpath (param "PROJECT_PATH")))
+
+(allow file-read-metadata sysctl-read)
+
+(allow file-read* file-test-existence (literal "/") (literal "/private"))
+
+(allow file-read*
+       file-map-executable
+       (subpath "/Library/Frameworks")
+       (subpath "/private/etc")
+       (subpath "/var/db/dyld"))
+
+(allow file-read*
+       file-map-executable
+       process-exec
+       (subpath "/System")
+       (subpath "/bin")
+       (subpath "/usr"))
+
+(allow file-read*
+       file-write*
+       (subpath "/tmp")
+       (regex "^/private/var/folders/.*/T/")
+       (literal "/dev/null")
+       (literal "/dev/zero"))
+
+(allow file-read* file-write* file-ioctl (regex "^/dev/tty.*"))
+
+(allow file-read*
+       (subpath "/private/var/db/timezone")
+       (subpath "/Library/Preferences")
+       (literal "/dev"))
+
+(allow mach-lookup
+       (global-name "com.apple.CoreServices.coreservicesd")
+       (global-name "com.apple.coreservices.launchservicesd")
+       (global-name "com.apple.logd")
+       (global-name "com.apple.system.notification_center")
+       (global-name "com.apple.system.opendirectoryd.libinfo")
+       (global-name "com.apple.SystemConfiguration.DNSConfigration")
+       (global-name "com.apple.lsd")
+       (regex "^com\\.apple\\.lsd\\..*$"))
+
+(allow ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center"))
+
+(allow file-read* file-write* file-map-executable process-exec (project-subpath))
+
+(allow network* (remote ip "localhost:*"))
+(allow network-inbound (local ip))
+(allow network-outbound (remote udp "*:53") (remote udp "*:53"))
+
+(allow process-fork)
+(allow lsopen)
