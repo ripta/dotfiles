@@ -300,10 +300,6 @@
     insteadOf = gh:
 [url "git://gist.github.com/"]
     insteadOf = gist:
-[url "ssh://gitolite@githost.rent.com/"]
-    insteadOf = rent:
-[url "git@git.r8y.org:"]
-    insteadOf = r8y:
 
 # Who? Me.
 [user]
