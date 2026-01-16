@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+cmd_name="${1:-}"
+if [[ "${cmd_name}" = "" ]]
+then
+  echo "Usage: $0 <command> [args...]" 2>&1
+  echo "" 2>&1
+  echo "Execute a command under a seatbelt profile (named after the command)."
+  exit 2
+fi
+
+# Check that the profile by the name of the command actually exists
+profile_path="${HOME}/.dotfiles/policies/sbpl/${cmd_name}.sb"
+if [[ ! -f "${profile_path}" ]]
+then
+  echo "Error: profile '${profile_path}' not found" 2>&1
+  exit 1
+fi
+
+# Execute command
+echo "Activated profile '${profile_path}'" 2>&1
+exec sandbox-exec -f "${profile_path}" -D "HOME=${HOME}" -D "PROJECT_PATH=$(pwd)" "$*"
