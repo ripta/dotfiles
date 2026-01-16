@@ -12,7 +12,7 @@ ZSH_CUSTOM=$DOTFILES/zsh-custom
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
-if [[ "$TERM_PROGRAM" == "vscode" ]]; then
+if [[ "$TERM_PROGRAM" == "vscode" || "${TERMINAL_EMULATOR:-}" == "JetBrains-JediTerm" ]]; then
   ZSH_THEME=""  # Disable Powerlevel10k for Cursor
 else
   ZSH_THEME="powerlevel10k/powerlevel10k"

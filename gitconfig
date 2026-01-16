@@ -74,6 +74,8 @@
     fu = fetch upstream         ;   for a secondary remote
     gca = gc --aggressive       ; explicitly run garbage collection and repacking
     gi = grep --ignore-case     ; grep case insensitively
+    gia = grep --ignore-case --recurse-submodules
+                                ;   across all submodules
     l = log                     ; logs of current branch
     lc = local-commits          ;   unpushed changes - required git-local-commits
     ld = log --pretty=oneline --decorate
@@ -158,6 +160,8 @@
     srrm = symbolic-ref -d      ;   delete
     st = status --short         ; status of working tree
     ss = submodule sync         ; submodule sync
+    sur = !git submodule update --remote
+    surb = !git submodule update --remote --rebase
     surm = !git submodule update --remote --merge
     ssr = !git submodule sync && git submodule update --init --recursive
                                 ; submodule sync (recursive)
@@ -296,10 +300,6 @@
     insteadOf = gh:
 [url "git://gist.github.com/"]
     insteadOf = gist:
-[url "ssh://gitolite@githost.rent.com/"]
-    insteadOf = rent:
-[url "git@git.r8y.org:"]
-    insteadOf = r8y:
 
 # Who? Me.
 [user]
