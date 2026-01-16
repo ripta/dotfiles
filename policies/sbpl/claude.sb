@@ -1,15 +1,24 @@
+;; claude.sb - Seatbelt profile for Claude Code CLI.
+;; Extends common.sb with permissions required for Claude Code to function.
+
 (version 1)
 (deny default)
 
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/common.sb"))
 
-;; (allow file-read* file-write* file-ioctl (literal "/dev/dtracehelper"))
+;; Allow access to dtracehelper for DTrace-based profiling and debugging
+(allow file-read* file-write* file-ioctl (literal "/dev/dtracehelper"))
 
+;; User application data, keychain, and preferences
 (allow file-read*
        (home-subpath "/Library/Application Support")
        (home-literal "/Library/Keychains/login.keychain-db")
        (home-subpath "/Library/Preferences"))
 
+;; Homebrew binaries and Claude Code installation
+;;
+;; TODO(ripta): some development environments may require extra paths,
+;;              e.g., $HOME/.cargo for rust
 (allow file-read*
        file-map-executable
        process-exec
@@ -19,6 +28,7 @@
        (subpath "/opt/homebrew/Caskroom/claude-code")
        (home-subpath "/Public/Screenshots"))
 
+;; Claude Code configuration files and temporary storage
 (allow file-read*
        file-write*
        (home-subpath "/.claude")
@@ -26,6 +36,7 @@
        (home-prefix "/.claude.json.")
        (subpath "/private/tmp"))
 
+;; Mach services for diagnostics, filesystem events, and security/keychain access
 (allow mach-lookup
        (global-name "com.apple.diagnosticd")
        (global-name "com.apple.FSEvents")
@@ -34,4 +45,7 @@
        (global-name "com.apple.security.agent")
        (global-name "com.apple.securityd"))
 
+;; TODO(ripta): restrict outbound connections using a proxy (squid) or
+;;              host-based firewall (Little Snitch, Radio Silence, Lulu),
+;;              instead of allowing all egress
 (allow network-outbound)

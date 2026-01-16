@@ -1,11 +1,16 @@
+;; common.sb - Base seatbelt profile imported by application-specific profiles.
+;; Provides shared rules and helper functions for sandboxed processes.
+
 (version 1)
 (deny default)
 
+;; Core system imports for Foundation framework and dynamic linker support
 (import "com.apple.corefoundation.sb")
 (corefoundation)
 
 (import "dyld-support.sb")
 
+;; Path helper functions derived from Apple Private System Interface (APSI)
 (define (home-regex home-relative-regex)
         (regex
           (string-append "^" (regex-quote (param "HOME")) home-relative-regex)))
@@ -21,16 +26,19 @@
 
 (define (project-subpath) (subpath (param "PROJECT_PATH")))
 
+;; Basic filesystem and kernel metadata access
 (allow file-read-metadata sysctl-read)
 
 (allow file-read* file-test-existence (literal "/") (literal "/private"))
 
+;; System frameworks and configuration
 (allow file-read*
        file-map-executable
        (subpath "/Library/Frameworks")
        (subpath "/private/etc")
        (subpath "/var/db/dyld"))
 
+;; Core system binaries and libraries
 (allow file-read*
        file-map-executable
        process-exec
@@ -38,6 +46,7 @@
        (subpath "/bin")
        (subpath "/usr"))
 
+;; Temporary files and null devices
 (allow file-read*
        file-write*
        (subpath "/tmp")
@@ -45,13 +54,16 @@
        (literal "/dev/null")
        (literal "/dev/zero"))
 
+;; Terminal device access for interactive sessions
 (allow file-read* file-write* file-ioctl (regex "^/dev/tty.*"))
 
+;; Timezone data and system preferences
 (allow file-read*
        (subpath "/private/var/db/timezone")
        (subpath "/Library/Preferences")
        (literal "/dev"))
 
+;; Mach services for core OS functionality
 (allow mach-lookup
        (global-name "com.apple.CoreServices.coreservicesd")
        (global-name "com.apple.coreservices.launchservicesd")
@@ -62,13 +74,17 @@
        (global-name "com.apple.lsd")
        (regex "^com\\.apple\\.lsd\\..*$"))
 
+;; Shared memory for system notifications
 (allow ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center"))
 
+;; Full access to the project directory (passed via PROJECT_PATH parameter)
 (allow file-read* file-write* file-map-executable process-exec (project-subpath))
 
+;; Network: localhost access and DNS lookups only
 (allow network* (remote ip "localhost:*"))
 (allow network-inbound (local ip))
-(allow network-outbound (remote udp "*:53") (remote udp "*:53"))
+(allow network-outbound (remote udp "*:53") (remote tcp "*:53"))
 
+;; Process control
 (allow process-fork)
 (allow lsopen)
