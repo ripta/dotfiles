@@ -14,6 +14,7 @@
 #
 # Format types:
 #   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
+#   @ts    Relative timestamp (e.g., "2026-03-03T01:15:05Z" -> "5m", "1h15m")
 
 set -euo pipefail
 
@@ -21,7 +22,9 @@ if [[ $# -eq 0 ]]; then
   echo "Usage: $0 field_spec [field_spec ...]" >&2
   echo "" >&2
   echo "Field spec: [HEADER:]field_path[@format_type]" >&2
-  echo "Format types: @qty (Kubernetes quantity, e.g. 10m -> 0.010)" >&2
+  echo "Format types:" >&2
+  echo "  @qty  Kubernetes quantity (e.g. 10m -> 0.010)" >&2
+  echo "  @ts   Relative timestamp (e.g. 2026-03-03T01:15:05Z -> 5m)" >&2
   exit 1
 fi
 
@@ -39,6 +42,38 @@ def normalize_qty:
     .
   else
     .
+  end;
+def relative_ts:
+  # Parse ISO 8601 timestamp and format as kubectl-style relative age.
+  # Handles: "2026-03-03T01:15:05Z" -> "5m" or "1h15m" or "3d" etc.
+  if . == "" then "<none>"
+  else
+    (now | floor) as $now |
+    # Try with fractional seconds first, fall back to without
+    (if test("\\.[0-9]+Z$") then
+       gsub("\\.[0-9]+Z$"; "Z")
+     else . end
+     | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $ts |
+    ([$now - $ts, 0] | max) as $diff |
+    ($diff / 86400 | floor) as $days |
+    ($diff % 86400 / 3600 | floor) as $hours |
+    ($diff % 3600 / 60 | floor) as $mins |
+    ($diff % 60 | floor) as $secs |
+    if $days >= 365 then
+      (($days / 365 | floor) | tostring) + "y" +
+      if ($days % 365) >= 1 then (($days % 365 | floor) | tostring) + "d" else "" end
+    elif $days >= 1 then
+      ($days | tostring) + "d" +
+      if $hours >= 1 then ($hours | tostring) + "h" else "" end
+    elif $hours >= 1 then
+      ($hours | tostring) + "h" +
+      if $mins >= 1 then ($mins | tostring) + "m" else "" end
+    elif $mins >= 1 then
+      ($mins | tostring) + "m" +
+      if $secs >= 1 then ($secs | tostring) + "s" else "" end
+    else
+      ($secs | tostring) + "s"
+    end
   end;
 def getpath_str(p):
   reduce (p | split(".")[]) as $key
@@ -86,6 +121,7 @@ for spec in "$@"; do
   accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
   case "$fmt" in
     qty)  jq_fields+="${accessor} | normalize_qty)," ;;
+    ts)   jq_fields+="${accessor} | relative_ts)," ;;
     "")   jq_fields+="${accessor})," ;;
     *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
   esac
