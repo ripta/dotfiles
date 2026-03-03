@@ -41,6 +41,8 @@ function kt {
 
 function kubectl {
   local cmd
+  local -a args
+  local i
 
   args=( "$@" )
   for ((i = 1; i <= $#args; i++))
@@ -54,12 +56,10 @@ function kubectl {
       continue
     else
       cmd="${args[$i]}"
-      #echo "$i: ${args[@]}" >&2
-      args[$i]=()
+      args=( "${args[@]:0:$((i-1))}" "${args[@]:$i}" )
       break
     fi
   done
-  #args=( "${args[@]}" )
 
   #echo "cmd: $cmd"
   #echo "rest: ${(qq)args[@]}"
@@ -90,6 +90,10 @@ function prompt_kube_plugin() {
 #    to jq automatically, passing ".bar".
 # 4. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
+  local -a args
+  local i
+  local tplfile
+
   args=( "$@" )
 
   local rsrc
@@ -100,7 +104,7 @@ function __kubectl_get {
   local output_idx=-1
   local pipe_cmd=()
 
-  for ((i = 0; i <= $#args; i++))
+  for ((i = 1; i <= $#args; i++))
   do
     if [[ ${args[$i]} == -n ]] || [[ ${args[$i]} == --namespace ]]
     then
