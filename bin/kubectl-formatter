@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Format JSON with a top-level "items" array into a kubectl-like table.
+# Usage: cat data.json | formatter.sh field1 field2 ...
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: $0 field1 [field2 ...]" >&2
+  exit 1
+fi
+
+fields=("$@")
+
+# Build jq filter that extracts fields and normalizes CPU values.
+# CPU fields (containing "cpu") have millicpu notation converted:
+#   "10m"  -> "0.010"
+#   "500m" -> "0.500"
+#   "24"   -> "24"
+jq_normalize='
+def normalize_cpu:
+  if test("^[0-9]+m$") then
+    (ltrimstr("") | rtrimstr("m") | tonumber / 1000)
+    | tostring
+    | if test("\\.") then
+        # pad to 3 decimal places
+        split(".") | .[0] + "." + (.[1] + "000")[0:3]
+      else
+        . + ".000"
+      end
+  elif test("^[0-9]+(\\.[0-9]+)?$") then
+    .
+  else
+    .
+  end;
+'
+
+# Build the jq expression to extract each row
+jq_fields=""
+for f in "${fields[@]}"; do
+  if [[ "$f" == *cpu* ]]; then
+    jq_fields+="(.\"${f}\" // \"\" | tostring | normalize_cpu),"
+  else
+    jq_fields+="(.\"${f}\" // \"\" | tostring),"
+  fi
+done
+# Remove trailing comma
+jq_fields="${jq_fields%,}"
+
+# Build header: uppercase, underscores to hyphens
+header=""
+for f in "${fields[@]}"; do
+  h="${f//_/-}"
+  h="${h^^}"
+  header+="${h}\t"
+done
+
+# Run jq and format with column -t
+{
+  printf '%b\n' "${header%\\t}"
+  jq -r "${jq_normalize} .items[] | [${jq_fields}] | @tsv"
+} | column -t
