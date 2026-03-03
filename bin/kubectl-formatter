@@ -1,29 +1,36 @@
 #!/usr/bin/env bash
 #
 # Format JSON with a top-level "items" array into a kubectl-like table.
-# Usage: cat data.json | formatter.sh field1 field2 ...
+#
+# Usage: cat data.json | kubectl-formatter field_spec [field_spec ...]
+#
+# Field spec format: [HEADER:]field_path[@format_type]
+#
+# Examples:
+#   namespace                     -> header: NAMESPACE,    field: namespace
+#   IMAGE:spec.containers.0.image -> header: IMAGE,        field: spec.containers.0.image
+#   cpu_request@qty               -> header: CPU-REQUEST,  field: cpu_request, format: qty
+#   CPU:spec.cpu@qty              -> header: CPU,          field: spec.cpu,    format: qty
+#
+# Format types:
+#   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
 
 set -euo pipefail
 
 if [[ $# -eq 0 ]]; then
-  echo "Usage: $0 field1 [field2 ...]" >&2
+  echo "Usage: $0 field_spec [field_spec ...]" >&2
+  echo "" >&2
+  echo "Field spec: [HEADER:]field_path[@format_type]" >&2
+  echo "Format types: @qty (Kubernetes quantity, e.g. 10m -> 0.010)" >&2
   exit 1
 fi
 
-fields=("$@")
-
-# Build jq filter that extracts fields and normalizes CPU values.
-# CPU fields (containing "cpu") have millicpu notation converted:
-#   "10m"  -> "0.010"
-#   "500m" -> "0.500"
-#   "24"   -> "24"
-jq_normalize='
-def normalize_cpu:
+jq_helpers='
+def normalize_qty:
   if test("^[0-9]+m$") then
-    (ltrimstr("") | rtrimstr("m") | tonumber / 1000)
+    (rtrimstr("m") | tonumber / 1000)
     | tostring
     | if test("\\.") then
-        # pad to 3 decimal places
         split(".") | .[0] + "." + (.[1] + "000")[0:3]
       else
         . + ".000"
@@ -39,29 +46,56 @@ def getpath_str(p):
         else .[$key] // null end);
 '
 
-# Build the jq expression to extract each row
+header=""
 jq_fields=""
-for f in "${fields[@]}"; do
-  accessor="(getpath_str(\"${f}\") // \"\" | tostring"
-  if [[ "$f" == *cpu* ]]; then
-    jq_fields+="${accessor} | normalize_cpu),"
-  else
-    jq_fields+="${accessor}),"
+
+for spec in "$@"; do
+  # Parse optional HEADER: prefix
+  custom_header=""
+  rest="$spec"
+  if [[ "$rest" == *:* ]]; then
+    # Only treat as custom header if the part before : has no dots
+    # (to avoid confusing "metadata.labels:app" with a header prefix)
+    maybe_header="${rest%%:*}"
+    if [[ "$maybe_header" != *.* ]]; then
+      custom_header="$maybe_header"
+      rest="${rest#*:}"
+    fi
   fi
+
+  # Parse optional @format suffix
+  fmt=""
+  if [[ "$rest" == *@* ]]; then
+    fmt="${rest##*@}"
+    rest="${rest%@*}"
+  fi
+
+  field_path="$rest"
+
+  # Build header
+  if [[ -n "$custom_header" ]]; then
+    h="${custom_header//_/-}"
+    h="${h^^}"
+  else
+    h="${field_path//_/-}"
+    h="${h^^}"
+  fi
+  header+="${h}\t"
+
+  # Build jq accessor with optional format
+  accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
+  case "$fmt" in
+    qty)  jq_fields+="${accessor} | normalize_qty)," ;;
+    "")   jq_fields+="${accessor})," ;;
+    *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
+  esac
 done
+
 # Remove trailing comma
 jq_fields="${jq_fields%,}"
-
-# Build header: uppercase, underscores to hyphens
-header=""
-for f in "${fields[@]}"; do
-  h="${f//_/-}"
-  h="${h^^}"
-  header+="${h}\t"
-done
 
 # Run jq and format with column -t
 {
   printf '%b\n' "${header%\\t}"
-  jq -r "${jq_normalize} .items[] | [${jq_fields}] | @tsv"
+  jq -r "${jq_helpers} .items[] | [${jq_fields}] | @tsv"
 } | column -t
