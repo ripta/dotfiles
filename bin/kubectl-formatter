@@ -15,6 +15,7 @@
 # Format types:
 #   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
 #   @ts    Relative timestamp (e.g., "2026-03-03T01:15:05Z" -> "5m", "1h15m")
+#   @mem   Memory quantity normalization (e.g., "1974266625" -> "1.8Gi", "32272432Ki" -> "30.8Gi")
 
 set -euo pipefail
 
@@ -25,6 +26,7 @@ if [[ $# -eq 0 ]]; then
   echo "Format types:" >&2
   echo "  @qty  Kubernetes quantity (e.g. 10m -> 0.010)" >&2
   echo "  @ts   Relative timestamp (e.g. 2026-03-03T01:15:05Z -> 5m)" >&2
+  echo "  @mem  Memory quantity (e.g. 1974266625 -> 1.8Gi)" >&2
   exit 1
 fi
 
@@ -43,6 +45,40 @@ def normalize_qty:
   else
     .
   end;
+def normalize_mem:
+  # Normalize Kubernetes memory quantities to a human-readable form.
+  # Input formats: raw bytes, Ki, Mi, Gi, Ti, Ei (binary) or k, M, G, T, E (decimal).
+  # Output: best-fit binary unit (Ki, Mi, Gi, Ti).
+  def to_bytes:
+    if test("^[0-9]+Ei$") then rtrimstr("Ei") | tonumber * 1152921504606846976
+    elif test("^[0-9]+Pi$") then rtrimstr("Pi") | tonumber * 1125899906842624
+    elif test("^[0-9]+Ti$") then rtrimstr("Ti") | tonumber * 1099511627776
+    elif test("^[0-9]+Gi$") then rtrimstr("Gi") | tonumber * 1073741824
+    elif test("^[0-9]+Mi$") then rtrimstr("Mi") | tonumber * 1048576
+    elif test("^[0-9]+Ki$") then rtrimstr("Ki") | tonumber * 1024
+    elif test("^[0-9]+E$") then rtrimstr("E") | tonumber * 1000000000000000000
+    elif test("^[0-9]+P$") then rtrimstr("P") | tonumber * 1000000000000000
+    elif test("^[0-9]+T$") then rtrimstr("T") | tonumber * 1000000000000
+    elif test("^[0-9]+G$") then rtrimstr("G") | tonumber * 1000000000
+    elif test("^[0-9]+M$") then rtrimstr("M") | tonumber * 1000000
+    elif test("^[0-9]+k$") then rtrimstr("k") | tonumber * 1000
+    elif test("^[0-9]+$") then tonumber
+    else null end;
+  def fmt_bytes(bytes):
+    if bytes >= 1099511627776 then
+      ((bytes / 1099511627776 * 10 | floor) / 10 | tostring) + "Ti"
+    elif bytes >= 1073741824 then
+      ((bytes / 1073741824 * 10 | floor) / 10 | tostring) + "Gi"
+    elif bytes >= 1048576 then
+      ((bytes / 1048576 * 10 | floor) / 10 | tostring) + "Mi"
+    elif bytes >= 1024 then
+      ((bytes / 1024 * 10 | floor) / 10 | tostring) + "Ki"
+    else
+      (bytes | tostring) + "B"
+    end;
+  to_bytes as $b |
+  if $b == null then .
+  else fmt_bytes($b) end;
 def relative_ts:
   # Parse ISO 8601 timestamp and format as kubectl-style relative age.
   # Handles: "2026-03-03T01:15:05Z" -> "5m" or "1h15m" or "3d" etc.
@@ -122,6 +158,7 @@ for spec in "$@"; do
   case "$fmt" in
     qty)  jq_fields+="${accessor} | normalize_qty)," ;;
     ts)   jq_fields+="${accessor} | relative_ts)," ;;
+    mem)  jq_fields+="${accessor} | normalize_mem)," ;;
     "")   jq_fields+="${accessor})," ;;
     *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
   esac
