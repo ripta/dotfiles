@@ -33,15 +33,20 @@ def normalize_cpu:
   else
     .
   end;
+def getpath_str(p):
+  reduce (p | split(".")[]) as $key
+    (.; if $key | test("^[0-9]+$") then .[$key | tonumber] // null
+        else .[$key] // null end);
 '
 
 # Build the jq expression to extract each row
 jq_fields=""
 for f in "${fields[@]}"; do
+  accessor="(getpath_str(\"${f}\") // \"\" | tostring"
   if [[ "$f" == *cpu* ]]; then
-    jq_fields+="(.\"${f}\" // \"\" | tostring | normalize_cpu),"
+    jq_fields+="${accessor} | normalize_cpu),"
   else
-    jq_fields+="(.\"${f}\" // \"\" | tostring),"
+    jq_fields+="${accessor}),"
   fi
 done
 # Remove trailing comma
