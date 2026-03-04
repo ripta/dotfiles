@@ -1,14 +1,16 @@
+typeset -a KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+
 function kt {
   local file=$1
   if [[ -z "$file" ]]
   then
-    for dir in ~/.kube/configs ~/.ssh/kubeconfigs
+    for dir in "${KUBE_CONFIG_DIRS[@]}"
     do
       if [[ ! -d "$dir" ]]
       then
         continue
       fi
-      for cand in $(ls "$dir")
+      for cand in "$dir"/*(N:t)
       do
         if [[ -n "$KUBECONFIG" && "$KUBECONFIG" = "$dir/$cand" ]]
         then
@@ -27,7 +29,7 @@ function kt {
     return
   fi
 
-  for dir in ~/.kube/configs ~/.ssh/kubeconfigs
+  for dir in "${KUBE_CONFIG_DIRS[@]}"
   do
     if [[ -f "$dir/$file" ]]
     then
@@ -75,8 +77,8 @@ function kubectl {
 function prompt_kube_plugin() {
   local name cfg
   [[ -n "$KUBECONFIG" ]] || return
-  cfg="$(echo "$KUBECONFIG" | awk -F: '{print $1}')"
-  name="$(basename $cfg)"
+  cfg="${KUBECONFIG%%:*}"
+  name="${cfg:t}"
   p10k segment -s NORMAL -r -i KUBERNETES_ICON -b black -f white -t "$name"
 }
 
@@ -115,6 +117,15 @@ function __kubectl_get {
     if [[ ${args[$i]} == -o ]] || [[ ${args[$i]} == --output ]]
     then
       output_idx=$((i + 1))
+      continue
+    fi
+
+    if [[ ${args[$i]} == -o=* ]] || [[ ${args[$i]} == --output=* ]]
+    then
+      local _oval="${args[$i]#*=}"
+      args=( "${args[@]:0:$((i-1))}" "-o" "$_oval" "${args[@]:$i}" )
+      output_idx=$((i + 1))
+      i=$((i + 1))
       continue
     fi
 
@@ -170,6 +181,7 @@ function __kubectl_get {
     then
       namespace=${namespace//\//--}
       namespace=${namespace//_/-}
+      echo "kt: rewriting namespace '${args[$namespace_idx]}' -> '${namespace}'" >&2
       args[$namespace_idx]=$namespace
     fi
   fi
@@ -202,3 +214,16 @@ function __kubectl_get {
     command kubectl get "${args[@]}" | "${pipe_cmd[@]}"
   fi
 }
+
+
+function _kt {
+  local -a configs
+  local dir
+  for dir in "${KUBE_CONFIG_DIRS[@]}"
+  do
+    [[ -d "$dir" ]] || continue
+    configs+=( "$dir"/*(N:t) )
+  done
+  _describe 'kubeconfig' configs
+}
+compdef _kt kt
