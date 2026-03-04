@@ -2,8 +2,10 @@ typeset -a KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
 
 function kt {
   local file=$1
+  local dir cand
   if [[ -z "$file" ]]
   then
+    local active="${KUBECONFIG%%:*}"
     for dir in "${KUBE_CONFIG_DIRS[@]}"
     do
       if [[ ! -d "$dir" ]]
@@ -12,7 +14,7 @@ function kt {
       fi
       for cand in "$dir"/*(N:t)
       do
-        if [[ -n "$KUBECONFIG" && "$KUBECONFIG" = "$dir/$cand" ]]
+        if [[ -n "$active" && "$active" = "$dir/$cand" ]]
         then
           echo "* $cand"
         else
@@ -53,7 +55,7 @@ function kubectl {
     then
       i=$((i + 1))
       continue
-    elif [[ ${args[$i]} == --namespace=* ]]
+    elif [[ ${args[$i]} == -n=* ]] || [[ ${args[$i]} == --namespace=* ]]
     then
       continue
     else
@@ -65,6 +67,11 @@ function kubectl {
 
   #echo "cmd: $cmd"
   #echo "rest: ${(qq)args[@]}"
+  if [[ -z "$cmd" ]]; then
+    command kubectl "$@"
+    return
+  fi
+
   if type "__kubectl_${cmd}" >/dev/null 2>&1
   then
     "__kubectl_${cmd}" "${args[@]}"
@@ -114,6 +121,15 @@ function __kubectl_get {
       continue
     fi
 
+    if [[ ${args[$i]} == -n=* ]] || [[ ${args[$i]} == --namespace=* ]]
+    then
+      local _nval="${args[$i]#*=}"
+      args=( "${args[@]:0:$((i-1))}" "-n" "$_nval" "${args[@]:$i}" )
+      namespace_idx=$((i + 1))
+      i=$((i + 2))
+      continue
+    fi
+
     if [[ ${args[$i]} == -o ]] || [[ ${args[$i]} == --output ]]
     then
       output_idx=$((i + 1))
@@ -125,7 +141,7 @@ function __kubectl_get {
       local _oval="${args[$i]#*=}"
       args=( "${args[@]:0:$((i-1))}" "-o" "$_oval" "${args[@]:$i}" )
       output_idx=$((i + 1))
-      i=$((i + 1))
+      i=$((i + 2))
       continue
     fi
 
@@ -181,7 +197,7 @@ function __kubectl_get {
     then
       namespace=${namespace//\//--}
       namespace=${namespace//_/-}
-      echo "kt: rewriting namespace '${args[$namespace_idx]}' -> '${namespace}'" >&2
+      echo "kubectl get: rewriting namespace '${args[$namespace_idx]}' -> '${namespace}'" >&2
       args[$namespace_idx]=$namespace
     fi
   fi
