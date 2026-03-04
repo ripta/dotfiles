@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+NAMESPACE=""
+
+while getopts "n:" OPT; do
+    case "$OPT" in
+        n) NAMESPACE="$OPTARG" ;;
+        *)
+            echo "Usage: $0 -n <namespace>" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z $NAMESPACE ]]; then
+    echo "Error: namespace is required (-n <namespace>)" >&2
+    exit 1
+fi
+
+TMPDIR_REPORT=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_REPORT"' EXIT
+
+PODS_FILE="$TMPDIR_REPORT/pods.json"
+NODES_FILE="$TMPDIR_REPORT/nodes.json"
+
+kubectl get pods -n "$NAMESPACE" -o json > "$PODS_FILE"
+
+# Extract unique node names from scheduled pods (skip unscheduled/Pending pods)
+NODE_NAMES=$(jq -r '[.items[].spec.nodeName // empty] | unique | .[]' "$PODS_FILE")
+
+echo '{"items":[]}' > "$NODES_FILE"
+if [[ -n $NODE_NAMES ]]; then
+    # shellcheck disable=SC2086
+    kubectl get nodes $NODE_NAMES -o json > "$NODES_FILE"
+fi
+
+jq -n --slurpfile pods "$PODS_FILE" --slurpfile nodes "$NODES_FILE" '
+  # Parse CPU string to millicores (integer)
+  def parse_cpu:
+    if . == null then null
+    elif test("m$") then (rtrimstr("m") | tonumber)
+    else (tonumber * 1000)
+    end;
+
+  # Parse memory string to bytes (integer)
+  def parse_memory:
+    if . == null then null
+    elif test("Ei$") then (rtrimstr("Ei") | tonumber * 1152921504606846976)
+    elif test("Pi$") then (rtrimstr("Pi") | tonumber * 1125899906842624)
+    elif test("Ti$") then (rtrimstr("Ti") | tonumber * 1099511627776)
+    elif test("Gi$") then (rtrimstr("Gi") | tonumber * 1073741824)
+    elif test("Mi$") then (rtrimstr("Mi") | tonumber * 1048576)
+    elif test("Ki$") then (rtrimstr("Ki") | tonumber * 1024)
+    elif test("E$")  then (rtrimstr("E")  | tonumber * 1000000000000000000)
+    elif test("P$")  then (rtrimstr("P")  | tonumber * 1000000000000000)
+    elif test("T$")  then (rtrimstr("T")  | tonumber * 1000000000000)
+    elif test("G$")  then (rtrimstr("G")  | tonumber * 1000000000)
+    elif test("M$")  then (rtrimstr("M")  | tonumber * 1000000)
+    elif test("k$")  then (rtrimstr("k")  | tonumber * 1000)
+    elif test("m$")  then (rtrimstr("m") | tonumber / 1000)
+    else (tonumber)
+    end;
+
+  # Format millicores back to human-readable
+  def format_cpu:
+    if . == null then null
+    elif . % 1000 == 0 then "\(. / 1000)"
+    else "\(.)m"
+    end;
+
+  # Format bytes back to largest clean unit
+  def format_memory:
+    if . == null then null
+    elif . % 1073741824 == 0 then "\(. / 1073741824)Gi"
+    elif . % 1048576 == 0 then "\(. / 1048576)Mi"
+    elif . % 1024 == 0 then "\(. / 1024)Ki"
+    else "\(.)"
+    end;
+
+  # Sum a resource field across containers.
+  # Returns null if ALL containers lack the field; otherwise sums set values (unset = 0).
+  def sum_field(path_expr):
+    [.[] | path_expr] |
+    if all(. == null) then null
+    else map(. // 0) | add
+    end;
+
+  # Build node lookup: node_name -> {instance_type, cpu_capacity, memory_capacity}
+  ($nodes[0].items | map({
+    key: .metadata.name,
+    value: {
+      instance_type: (.metadata.labels["node.kubernetes.io/instance-type"] // .metadata.labels["beta.kubernetes.io/instance-type"]),
+      cpu_capacity: .status.capacity.cpu,
+      memory_capacity: .status.capacity.memory
+    }
+  }) | from_entries) as $node_map |
+
+  # Process each pod
+  [
+    $pods[0].items[] |
+    .metadata as $meta |
+    .spec as $spec |
+
+    # Only regular containers (not init containers)
+    ($spec.containers | map(.resources // {})) as $resources |
+
+    # Sum resource fields
+    ($resources | sum_field(.requests.cpu | parse_cpu)) as $cpu_req |
+    ($resources | sum_field(.limits.cpu | parse_cpu)) as $cpu_lim |
+    ($resources | sum_field(.requests.memory | parse_memory)) as $mem_req |
+    ($resources | sum_field(.limits.memory | parse_memory)) as $mem_lim |
+
+    # Node info (null for unscheduled pods)
+    ($spec.nodeName // null) as $node_name |
+    (if $node_name then $node_map[$node_name] else null end) as $node_info |
+
+    {
+      namespace: $meta.namespace,
+      name: $meta.name,
+      cpu_request: ($cpu_req | format_cpu),
+      cpu_limit: ($cpu_lim | format_cpu),
+      memory_request: ($mem_req | format_memory),
+      memory_limit: ($mem_lim | format_memory),
+      node_name: $node_name,
+      node_instance_type: (if $node_info then $node_info.instance_type else null end),
+      node_cpu_capacity: (if $node_info then $node_info.cpu_capacity else null end),
+      node_memory_capacity: (if $node_info then $node_info.memory_capacity else null end)
+    }
+  ] | sort_by(.name) | {items: .}
+'
