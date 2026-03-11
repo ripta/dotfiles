@@ -5,8 +5,8 @@ set -eou pipefail
 NAMESPACE=""
 
 while getopts "n:" OPT; do
-    case "$OPT" in
-        n) NAMESPACE="$OPTARG" ;;
+    case "${OPT}" in
+        n) NAMESPACE="${OPTARG}" ;;
         *)
             echo "Usage: $0 -n <namespace>" >&2
             exit 1
@@ -14,7 +14,7 @@ while getopts "n:" OPT; do
     esac
 done
 
-if [[ -z $NAMESPACE ]]; then
+if [[ -z ${NAMESPACE} ]]; then
     echo "Error: namespace is required (-n <namespace>)" >&2
     exit 1
 fi
@@ -22,21 +22,21 @@ fi
 TMPDIR_REPORT=$(mktemp -d)
 trap 'rm -rf "$TMPDIR_REPORT"' EXIT
 
-PODS_FILE="$TMPDIR_REPORT/pods.json"
-NODES_FILE="$TMPDIR_REPORT/nodes.json"
+PODS_FILE="${TMPDIR_REPORT}/pods.json"
+NODES_FILE="${TMPDIR_REPORT}/nodes.json"
 
-kubectl get pods -n "$NAMESPACE" -o json > "$PODS_FILE"
+kubectl get pods -n "${NAMESPACE}" -o json > "${PODS_FILE}"
 
 # Extract unique node names from scheduled pods (skip unscheduled/Pending pods)
-NODE_NAMES=$(jq -r '[.items[].spec.nodeName // empty] | unique | .[]' "$PODS_FILE")
+NODE_NAMES=$(jq -r '[.items[].spec.nodeName // empty] | unique | .[]' "${PODS_FILE}")
 
-echo '{"items":[]}' > "$NODES_FILE"
-if [[ -n $NODE_NAMES ]]; then
+echo '{"items":[]}' > "${NODES_FILE}"
+if [[ -n ${NODE_NAMES} ]]; then
     # shellcheck disable=SC2086
-    kubectl get nodes $NODE_NAMES -o json > "$NODES_FILE"
+    kubectl get nodes ${NODE_NAMES} -o json > "${NODES_FILE}"
 fi
 
-jq -n --slurpfile pods "$PODS_FILE" --slurpfile nodes "$NODES_FILE" '
+jq -n --slurpfile pods "${PODS_FILE}" --slurpfile nodes "${NODES_FILE}" '
   # Parse CPU string to millicores (integer)
   def parse_cpu:
     if . == null then null
