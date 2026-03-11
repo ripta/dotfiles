@@ -30,6 +30,7 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
+# shellcheck disable=SC2016
 jq_helpers='
 def normalize_qty:
   if test("^[0-9]+m$") then
@@ -123,28 +124,28 @@ jq_fields=""
 for spec in "$@"; do
   # Parse optional HEADER: prefix
   custom_header=""
-  rest="$spec"
-  if [[ "$rest" == *:* ]]; then
+  rest="${spec}"
+  if [[ "${rest}" == *:* ]]; then
     # Only treat as custom header if the part before : has no dots
     # (to avoid confusing "metadata.labels:app" with a header prefix)
     maybe_header="${rest%%:*}"
-    if [[ "$maybe_header" != *.* ]]; then
-      custom_header="$maybe_header"
+    if [[ "${maybe_header}" != *.* ]]; then
+      custom_header="${maybe_header}"
       rest="${rest#*:}"
     fi
   fi
 
   # Parse optional @format suffix
   fmt=""
-  if [[ "$rest" == *@* ]]; then
+  if [[ "${rest}" == *@* ]]; then
     fmt="${rest##*@}"
     rest="${rest%@*}"
   fi
 
-  field_path="$rest"
+  field_path="${rest}"
 
   # Build header
-  if [[ -n "$custom_header" ]]; then
+  if [[ -n "${custom_header}" ]]; then
     h="${custom_header//_/-}"
     h="${h^^}"
   else
@@ -155,7 +156,7 @@ for spec in "$@"; do
 
   # Build jq accessor with optional format
   accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
-  case "$fmt" in
+  case "${fmt}" in
     qty)  jq_fields+="${accessor} | normalize_qty)," ;;
     ts)   jq_fields+="${accessor} | relative_ts)," ;;
     mem)  jq_fields+="${accessor} | normalize_mem)," ;;
