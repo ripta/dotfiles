@@ -1,0 +1,5 @@
+# pods.kf
+namespace
+NAME:metadata.name
+AGE:metadata.creationTimestamp@ts
+cpu_request@qty

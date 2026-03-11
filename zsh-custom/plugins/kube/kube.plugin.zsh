@@ -97,7 +97,9 @@ function prompt_kube_plugin() {
 #    and sets the output format to it if it exists.
 # 3. "kc get foo -o .bar" replaces the output format with "-o json" and pipes
 #    to jq automatically, passing ".bar".
-# 4. "kc get foo" sets a default --sort-by unless one was provided.
+# 4. "kc get foo -o @bar" looks for the formatter spec "bar.kf" and pipes
+#    JSON through kubectl-formatter with the field specs from the file.
+# 5. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
   local -a args
   local i
@@ -176,6 +178,23 @@ function __kubectl_get {
       fi
 
       args[$output_idx]="custom-columns-file=${tplfile}"
+    elif [[ ${args[$output_idx]} == @* ]]
+    then
+      local kffile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#@}.kf"
+      if [[ ! -f ${kffile} ]]
+      then
+        echo "Error: formatter spec file not found ${kffile}" >&2
+        return 1
+      fi
+
+      local -a kf_specs=()
+      while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        kf_specs+=( "$line" )
+      done < "$kffile"
+
+      pipe_cmd=( "kubectl-formatter" "${kf_specs[@]}" )
+      args[$output_idx]="json"
     elif [[ ${args[$output_idx]} == .* ]]
     then
       pipe_cmd=( "jq" "-r" "${args[$output_idx]}" )
