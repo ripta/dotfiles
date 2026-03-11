@@ -28,7 +28,7 @@ function kcstat() {
   for n in $(kubectl get node | tail -n +2 | awk '{ print $1 }')
   do
     echo $n
-    echo -e "$(kubectl describe node $node | grep -A 4 'Allocated resources')\n"
+    echo -e "$(kubectl describe node $n | grep -A 4 'Allocated resources')\n"
   done
 }
 

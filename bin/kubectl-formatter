@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+#
+# Format JSON with a top-level "items" array into a kubectl-like table.
+#
+# Usage: cat data.json | kubectl-formatter field_spec [field_spec ...]
+#
+# Field spec format: [HEADER:]field_path[@format_type]
+#
+# Examples:
+#   namespace                     -> header: NAMESPACE,    field: namespace
+#   IMAGE:spec.containers.0.image -> header: IMAGE,        field: spec.containers.0.image
+#   cpu_request@qty               -> header: CPU-REQUEST,  field: cpu_request, format: qty
+#   CPU:spec.cpu@qty              -> header: CPU,          field: spec.cpu,    format: qty
+#
+# Format types:
+#   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
+#   @ts    Relative timestamp (e.g., "2026-03-03T01:15:05Z" -> "5m", "1h15m")
+#   @mem   Memory quantity normalization (e.g., "1974266625" -> "1.8Gi", "32272432Ki" -> "30.8Gi")
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: $0 field_spec [field_spec ...]" >&2
+  echo "" >&2
+  echo "Field spec: [HEADER:]field_path[@format_type]" >&2
+  echo "Format types:" >&2
+  echo "  @qty  Kubernetes quantity (e.g. 10m -> 0.010)" >&2
+  echo "  @ts   Relative timestamp (e.g. 2026-03-03T01:15:05Z -> 5m)" >&2
+  echo "  @mem  Memory quantity (e.g. 1974266625 -> 1.8Gi)" >&2
+  exit 1
+fi
+
+# shellcheck disable=SC2016
+jq_helpers='
+def normalize_qty:
+  if test("^[0-9]+m$") then
+    (rtrimstr("m") | tonumber / 1000)
+    | tostring
+    | if test("\\.") then
+        split(".") | .[0] + "." + (.[1] + "000")[0:3]
+      else
+        . + ".000"
+      end
+  elif test("^[0-9]+(\\.[0-9]+)?$") then
+    .
+  else
+    .
+  end;
+def normalize_mem:
+  # Normalize Kubernetes memory quantities to a human-readable form.
+  # Input formats: raw bytes, Ki, Mi, Gi, Ti, Ei (binary) or k, M, G, T, E (decimal).
+  # Output: best-fit binary unit (Ki, Mi, Gi, Ti).
+  def to_bytes:
+    if test("^[0-9]+Ei$") then rtrimstr("Ei") | tonumber * 1152921504606846976
+    elif test("^[0-9]+Pi$") then rtrimstr("Pi") | tonumber * 1125899906842624
+    elif test("^[0-9]+Ti$") then rtrimstr("Ti") | tonumber * 1099511627776
+    elif test("^[0-9]+Gi$") then rtrimstr("Gi") | tonumber * 1073741824
+    elif test("^[0-9]+Mi$") then rtrimstr("Mi") | tonumber * 1048576
+    elif test("^[0-9]+Ki$") then rtrimstr("Ki") | tonumber * 1024
+    elif test("^[0-9]+E$") then rtrimstr("E") | tonumber * 1000000000000000000
+    elif test("^[0-9]+P$") then rtrimstr("P") | tonumber * 1000000000000000
+    elif test("^[0-9]+T$") then rtrimstr("T") | tonumber * 1000000000000
+    elif test("^[0-9]+G$") then rtrimstr("G") | tonumber * 1000000000
+    elif test("^[0-9]+M$") then rtrimstr("M") | tonumber * 1000000
+    elif test("^[0-9]+k$") then rtrimstr("k") | tonumber * 1000
+    elif test("^[0-9]+$") then tonumber
+    else null end;
+  def fmt_bytes(bytes):
+    if bytes >= 1099511627776 then
+      ((bytes / 1099511627776 * 10 | floor) / 10 | tostring) + "Ti"
+    elif bytes >= 1073741824 then
+      ((bytes / 1073741824 * 10 | floor) / 10 | tostring) + "Gi"
+    elif bytes >= 1048576 then
+      ((bytes / 1048576 * 10 | floor) / 10 | tostring) + "Mi"
+    elif bytes >= 1024 then
+      ((bytes / 1024 * 10 | floor) / 10 | tostring) + "Ki"
+    else
+      (bytes | tostring) + "B"
+    end;
+  to_bytes as $b |
+  if $b == null then .
+  else fmt_bytes($b) end;
+def relative_ts:
+  # Parse ISO 8601 timestamp and format as kubectl-style relative age.
+  # Handles: "2026-03-03T01:15:05Z" -> "5m" or "1h15m" or "3d" etc.
+  if . == "" then "<none>"
+  else
+    (now | floor) as $now |
+    # Try with fractional seconds first, fall back to without
+    (if test("\\.[0-9]+Z$") then
+       gsub("\\.[0-9]+Z$"; "Z")
+     else . end
+     | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $ts |
+    ([$now - $ts, 0] | max) as $diff |
+    ($diff / 86400 | floor) as $days |
+    ($diff % 86400 / 3600 | floor) as $hours |
+    ($diff % 3600 / 60 | floor) as $mins |
+    ($diff % 60 | floor) as $secs |
+    if $days >= 365 then
+      (($days / 365 | floor) | tostring) + "y" +
+      if ($days % 365) >= 1 then (($days % 365 | floor) | tostring) + "d" else "" end
+    elif $days >= 1 then
+      ($days | tostring) + "d" +
+      if $hours >= 1 then ($hours | tostring) + "h" else "" end
+    elif $hours >= 1 then
+      ($hours | tostring) + "h" +
+      if $mins >= 1 then ($mins | tostring) + "m" else "" end
+    elif $mins >= 1 then
+      ($mins | tostring) + "m" +
+      if $secs >= 1 then ($secs | tostring) + "s" else "" end
+    else
+      ($secs | tostring) + "s"
+    end
+  end;
+def getpath_str(p):
+  reduce (p | split(".")[]) as $key
+    (.; if $key | test("^[0-9]+$") then .[$key | tonumber] // null
+        else .[$key] // null end);
+'
+
+header=""
+jq_fields=""
+
+for spec in "$@"; do
+  # Parse optional HEADER: prefix
+  custom_header=""
+  rest="${spec}"
+  if [[ "${rest}" == *:* ]]; then
+    # Only treat as custom header if the part before : has no dots
+    # (to avoid confusing "metadata.labels:app" with a header prefix)
+    maybe_header="${rest%%:*}"
+    if [[ "${maybe_header}" != *.* ]]; then
+      custom_header="${maybe_header}"
+      rest="${rest#*:}"
+    fi
+  fi
+
+  # Parse optional @format suffix
+  fmt=""
+  if [[ "${rest}" == *@* ]]; then
+    fmt="${rest##*@}"
+    rest="${rest%@*}"
+  fi
+
+  field_path="${rest}"
+
+  # Build header
+  if [[ -n "${custom_header}" ]]; then
+    h="${custom_header//_/-}"
+    h="${h^^}"
+  else
+    h="${field_path//_/-}"
+    h="${h^^}"
+  fi
+  header+="${h}\t"
+
+  # Build jq accessor with optional format
+  accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
+  case "${fmt}" in
+    qty)  jq_fields+="${accessor} | normalize_qty)," ;;
+    ts)   jq_fields+="${accessor} | relative_ts)," ;;
+    mem)  jq_fields+="${accessor} | normalize_mem)," ;;
+    "")   jq_fields+="${accessor})," ;;
+    *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
+  esac
+done
+
+# Remove trailing comma
+jq_fields="${jq_fields%,}"
+
+# Run jq and format with column -t
+{
+  printf '%b\n' "${header%\\t}"
+  jq -r "${jq_helpers} .items[] | [${jq_fields}] | @tsv"
+} | column -t

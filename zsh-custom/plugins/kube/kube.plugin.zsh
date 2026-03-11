@@ -1,16 +1,20 @@
+typeset -a KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+
 function kt {
   local file=$1
+  local dir cand
   if [[ -z "$file" ]]
   then
-    for dir in ~/.kube/configs ~/.ssh/kubeconfigs
+    local active="${KUBECONFIG%%:*}"
+    for dir in "${KUBE_CONFIG_DIRS[@]}"
     do
       if [[ ! -d "$dir" ]]
       then
         continue
       fi
-      for cand in $(ls "$dir")
+      for cand in "$dir"/*(N:t)
       do
-        if [[ -n "$KUBECONFIG" && "$KUBECONFIG" = "$dir/$cand" ]]
+        if [[ -n "$active" && "$active" = "$dir/$cand" ]]
         then
           echo "* $cand"
         else
@@ -27,7 +31,7 @@ function kt {
     return
   fi
 
-  for dir in ~/.kube/configs ~/.ssh/kubeconfigs
+  for dir in "${KUBE_CONFIG_DIRS[@]}"
   do
     if [[ -f "$dir/$file" ]]
     then
@@ -41,6 +45,8 @@ function kt {
 
 function kubectl {
   local cmd
+  local -a args
+  local i
 
   args=( "$@" )
   for ((i = 1; i <= $#args; i++))
@@ -49,20 +55,23 @@ function kubectl {
     then
       i=$((i + 1))
       continue
-    elif [[ ${args[$i]} == --namespace=* ]]
+    elif [[ ${args[$i]} == -n=* ]] || [[ ${args[$i]} == --namespace=* ]]
     then
       continue
     else
       cmd="${args[$i]}"
-      #echo "$i: ${args[@]}" >&2
-      args[$i]=()
+      args=( "${args[@]:0:$((i-1))}" "${args[@]:$i}" )
       break
     fi
   done
-  #args=( "${args[@]}" )
 
   #echo "cmd: $cmd"
   #echo "rest: ${(qq)args[@]}"
+  if [[ -z "$cmd" ]]; then
+    command kubectl "$@"
+    return
+  fi
+
   if type "__kubectl_${cmd}" >/dev/null 2>&1
   then
     "__kubectl_${cmd}" "${args[@]}"
@@ -75,8 +84,8 @@ function kubectl {
 function prompt_kube_plugin() {
   local name cfg
   [[ -n "$KUBECONFIG" ]] || return
-  cfg="$(echo "$KUBECONFIG" | awk -F: '{print $1}')"
-  name="$(basename $cfg)"
+  cfg="${KUBECONFIG%%:*}"
+  name="${cfg:t}"
   p10k segment -s NORMAL -r -i KUBERNETES_ICON -b black -f white -t "$name"
 }
 
@@ -88,8 +97,14 @@ function prompt_kube_plugin() {
 #    and sets the output format to it if it exists.
 # 3. "kc get foo -o .bar" replaces the output format with "-o json" and pipes
 #    to jq automatically, passing ".bar".
-# 4. "kc get foo" sets a default --sort-by unless one was provided.
+# 4. "kc get foo -o @bar" looks for the formatter spec "bar.kf" and pipes
+#    JSON through kubectl-formatter with the field specs from the file.
+# 5. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
+  local -a args
+  local i
+  local tplfile
+
   args=( "$@" )
 
   local rsrc
@@ -100,7 +115,7 @@ function __kubectl_get {
   local output_idx=-1
   local pipe_cmd=()
 
-  for ((i = 0; i <= $#args; i++))
+  for ((i = 1; i <= $#args; i++))
   do
     if [[ ${args[$i]} == -n ]] || [[ ${args[$i]} == --namespace ]]
     then
@@ -108,9 +123,27 @@ function __kubectl_get {
       continue
     fi
 
+    if [[ ${args[$i]} == -n=* ]] || [[ ${args[$i]} == --namespace=* ]]
+    then
+      local _nval="${args[$i]#*=}"
+      args=( "${args[@]:0:$((i-1))}" "-n" "$_nval" "${args[@]:$i}" )
+      namespace_idx=$((i + 1))
+      i=$((i + 2))
+      continue
+    fi
+
     if [[ ${args[$i]} == -o ]] || [[ ${args[$i]} == --output ]]
     then
       output_idx=$((i + 1))
+      continue
+    fi
+
+    if [[ ${args[$i]} == -o=* ]] || [[ ${args[$i]} == --output=* ]]
+    then
+      local _oval="${args[$i]#*=}"
+      args=( "${args[@]:0:$((i-1))}" "-o" "$_oval" "${args[@]:$i}" )
+      output_idx=$((i + 1))
+      i=$((i + 2))
       continue
     fi
 
@@ -145,6 +178,23 @@ function __kubectl_get {
       fi
 
       args[$output_idx]="custom-columns-file=${tplfile}"
+    elif [[ ${args[$output_idx]} == @* ]]
+    then
+      local kffile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#@}.kf"
+      if [[ ! -f ${kffile} ]]
+      then
+        echo "Error: formatter spec file not found ${kffile}" >&2
+        return 1
+      fi
+
+      local -a kf_specs=()
+      while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        kf_specs+=( "$line" )
+      done < "$kffile"
+
+      pipe_cmd=( "kubectl-formatter" "${kf_specs[@]}" )
+      args[$output_idx]="json"
     elif [[ ${args[$output_idx]} == .* ]]
     then
       pipe_cmd=( "jq" "-r" "${args[$output_idx]}" )
@@ -166,6 +216,7 @@ function __kubectl_get {
     then
       namespace=${namespace//\//--}
       namespace=${namespace//_/-}
+      echo "kubectl get: rewriting namespace '${args[$namespace_idx]}' -> '${namespace}'" >&2
       args[$namespace_idx]=$namespace
     fi
   fi
@@ -198,3 +249,16 @@ function __kubectl_get {
     command kubectl get "${args[@]}" | "${pipe_cmd[@]}"
   fi
 }
+
+
+function _kt {
+  local -a configs
+  local dir
+  for dir in "${KUBE_CONFIG_DIRS[@]}"
+  do
+    [[ -d "$dir" ]] || continue
+    configs+=( "$dir"/*(N:t) )
+  done
+  _describe 'kubeconfig' configs
+}
+compdef _kt kt

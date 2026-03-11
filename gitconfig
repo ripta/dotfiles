@@ -171,6 +171,8 @@
     tme = !git lme --no-merges --stat --name-only --pretty=format:'' | sort -u
                                 ; touchlist: files I have modified
     ur = update-ref             ; update sym ref safely
+    w = worktree list
+    wa = worktree add
     wc = whatchanged            ; what files changed
     wcme = !git whatchanged --author=$(git config user.email) || exit 0
                                 ;   by me, and always succeed
