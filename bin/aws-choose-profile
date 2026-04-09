@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 
 choose-profile() {
+  local query="$1"
   local selections
   selections="$(render-options)" || return 1
-  fzf --ansi <<<"${selections}"
+
+  if [[ -n "${query}" ]]; then
+    local exact
+    exact="$(awk -v q="${query}" '$1 == q' <<<"${selections}")"
+    if [[ -n "${exact}" ]]; then
+      head -1 <<<"${exact}"
+      return 0
+    fi
+  fi
+
+  fzf --ansi ${query:+--query "${query}"} <<<"${selections}"
 }
 
 # list-kubeconfigs-for $profile
@@ -41,7 +52,7 @@ render-options() {
     done | column -t -s$'\t'
 }
 
-sel="$(choose-profile)"
+sel="$(choose-profile "$1")"
 [[ -n "${sel}" ]] || {
   echo "No profile chosen. Exiting." >&2
   exit 1
