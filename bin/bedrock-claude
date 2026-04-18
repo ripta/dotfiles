@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# bedrock-claude: pick a Bedrock application inference profile via fzf, then
+# exec `claude` with the right env for the current AWS account/region.
+#
+# Config lives at ~/.bedrock-claude.json and has the shape:
+#
+#   {
+#     "modelsets": [
+#       {
+#         "name": "...",
+#         "type": "main" | "small_fast",
+#         "profiles": [
+#           { "arn": "..." }
+#         ]
+#       }
+#     ]
+#   }
+#
+# Account and region are parsed out of each ARN.
+
+set -euo pipefail
+
+CONFIG="${HOME}/.bedrock-claude.json"
+
+die() {
+  echo "bedrock-claude: $*" >&2
+  exit 1
+}
+
+for bin in aws claude fzf jq; do
+  command -v "${bin}" >/dev/null 2>&1 || die "required binary not found: ${bin}"
+done
+
+[[ -r "${CONFIG}" ]] || die "config not readable: ${CONFIG}"
+
+selected_name="$(jq -r '.modelsets[] | select(.type == "main") | .name' "${CONFIG}" | fzf --prompt='modelset> ' --no-multi || true)"
+[[ -n "${selected_name}" ]] || { echo "No modelset selected." >&2; exit 1; }
+
+current_account="$(aws sts get-caller-identity --query Account --output text)"
+[[ -n "${current_account}" && "${current_account}" != "None" ]] || die "could not determine current AWS account"
+current_region="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region || true)}}"
+
+# ARN format: arn:aws:bedrock:<region>:<account>:application-inference-profile/<id>
+# Given a list of ARNs, echo "<arn>\t<region>" for the first one whose account
+# (and region, if current_region is set) matches the current context. Echoes
+# nothing if no match. Always returns 0. Callers must check for empty output.
+match_arn_for_context() {
+  local arn arn_region arn_account
+  for arn in "$@"; do
+    IFS=':' read -r _ _ _ arn_region arn_account _ <<<"${arn}"
+    [[ "${arn_account}" == "${current_account}" ]] || continue
+    if [[ -n "${current_region}" && "${arn_region}" != "${current_region}" ]]; then
+      continue
+    fi
+    printf '%s\t%s\n' "${arn}" "${arn_region}"
+    return 0
+  done
+}
+
+mapfile -t main_arns < <(
+  jq -r --arg n "${selected_name}" '.modelsets[] | select(.name == $n) | .profiles[].arn' "${CONFIG}"
+)
+[[ "${#main_arns[@]}" -gt 0 ]] || die "modelset has no profiles: ${selected_name}"
+
+main_match="$(match_arn_for_context "${main_arns[@]}")"
+[[ -n "${main_match}" ]] || die "no ARN in modelset '${selected_name}' matches account=${current_account}${current_region:+ region=${current_region}}"
+IFS=$'\t' read -r matched_arn matched_region <<<"${main_match}"
+
+# Find a small_fast modelset whose ARN matches the same account/region.
+# Silently skip if none — the user told us not to set it in that case.
+small_fast_arn=""
+while IFS= read -r small_name; do
+  [[ -n "${small_name}" ]] || continue
+  mapfile -t small_arns < <(
+    jq -r --arg n "${small_name}" '.modelsets[] | select(.name == $n) | .profiles[].arn' "${CONFIG}"
+  )
+  small_match="$(match_arn_for_context "${small_arns[@]}")"
+  if [[ -n "${small_match}" ]]; then
+    IFS=$'\t' read -r small_fast_arn _ <<<"${small_match}"
+    break
+  fi
+done < <(jq -r '.modelsets[] | select(.type == "small_fast") | .name' "${CONFIG}")
+
+export CLAUDE_CODE_USE_BEDROCK=1
+export ANTHROPIC_MODEL="${matched_arn}"
+export AWS_REGION="${matched_region}"
+[[ -n "${small_fast_arn}" ]] && export ANTHROPIC_SMALL_FAST_MODEL="${small_fast_arn}"
+
+exec claude "$@"
