@@ -2,3 +2,38 @@
 [user]
     name = "Ripta Pasay"
     email = "ripta@users.noreply.github.com"
+
+[ui]
+    diff-formatter = "delta"
+    default-command = "log"
+    editor = "nvim"
+
+[git]
+    write-change-id-header = true
+
+[jjj.splash]
+    skip = true
+
+[merge-tools.delta]
+    program = "delta"
+
+[aliases]
+    l = ["log", "-r", "(main..@):: | (main..@)-"]
+    restack = ["rebase", "-d", "trunk()", "-s", "mutable_roots()", "--simplify-parents"]
+    stack = ["rebase", "-A", "trunk()", "-B", "closest_merge(@)", "-r"]
+    tug = ["bookmark", "move", "--from", "closest_bookmark(@)", "--to", "closest_pushable(@)"]
+
+[revset-aliases]
+    'closest_bookmark(to)' = 'heads(::to & bookmarks())'
+    'closest_pushable(to)' = "heads(::to & ~description(exact:'') & (~empty() | merges()))"
+    'closest_merge(to)'    = "heads(::to & merges())"
+
+    'immutable_heads()' = 'builtin_immutable_heads() | (trunk().. & ~mine())'
+    'mutable_roots()' = "roots(trunk()..) & mutable()"
+
+    'mine()' = "user(glob:'ripta@users.noreply.github.com')"
+    'user(x)' = 'author(x) | committer(x)'
+
+    'stack()' = 'stack(@)'
+    'stack(x)' = 'stack(x, 2)'
+    'stack(x, n)' = 'ancestors(reachable(x, mutable()), n)'
