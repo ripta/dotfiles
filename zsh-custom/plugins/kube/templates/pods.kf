@@ -2,4 +2,4 @@
 NAMESPACE:metadata.namespace
 NAME:metadata.name
 AGE:metadata.creationTimestamp@ts
-CPU-REQUEST:spec.containers[*].resources.requests.cpu@qty
+{"header":"CPU-REQUEST","foreach":"spec.containers","key":"name","value":"resources.requests.cpu","format":"qty"}

@@ -4,23 +4,44 @@
 #
 # Usage: cat data.json | kubectl-formatter field_spec [field_spec ...]
 #
-# Field spec format: [HEADER:]field_path[@format_type]
+# Field spec format: two forms.
 #
-# Path syntax: dot-separated segments. Numeric segments index arrays.
-# A segment ending in [*] iterates that array and continues walking each
-# element; the leaves are joined with "," in the output cell.
+#   1. Shorthand: [HEADER:]field_path[@format_type]
 #
-# Examples:
-#   namespace                              -> header: NAMESPACE,    field: namespace
-#   IMAGE:spec.containers.0.image          -> header: IMAGE,        field: spec.containers.0.image
-#   cpu_request@qty                        -> header: CPU-REQUEST,  field: cpu_request, format: qty
-#   CPU:spec.cpu@qty                       -> header: CPU,          field: spec.cpu,    format: qty
-#   IMAGES:spec.containers[*].image        -> header: IMAGES,       per-container images joined with ","
+#      Path syntax: dot-separated segments. Numeric segments index arrays.
+#      A segment ending in [*] iterates that array and continues walking each
+#      element; the leaves are joined with ", " in the output cell.
+#
+#      Shorthand examples:
+#        namespace                        -> header NAMESPACE,    field namespace
+#        IMAGE:spec.containers.0.image    -> header IMAGE,        field spec.containers.0.image
+#        cpu_request@qty                  -> header CPU-REQUEST,  field cpu_request,           format qty
+#        CPU:spec.cpu@qty                 -> header CPU,          field spec.cpu,              format qty
+#        IMAGES:spec.containers[*].image  -> header IMAGES,       per-container images joined with ", "
+#
+#   2. JSON (one object per column, for cases the shorthand can't express
+#      cleanly such as key:value mappings):
+#
+#        {
+#          "header":  "<column header>",        # required
+#          "path":    "<single-value path>",    # mutually exclusive with foreach
+#          "foreach": "<iteration root path>",  # iterate this array
+#          "key":     "<element-relative path>",# optional, only with foreach
+#          "value":   "<element-relative path>",# required with foreach
+#          "format":  "qty" | "ts" | "mem"      # optional
+#        }
+#
+#      JSON examples:
+#        {"header":"NAME","path":"metadata.name"}
+#        {"header":"AGE","path":"metadata.creationTimestamp","format":"ts"}
+#        {"header":"CPU-REQUEST","foreach":"spec.containers","key":"name",
+#         "value":"resources.requests.cpu","format":"qty"}
+#         -> proxy:0.050, main:0.250
 #
 # Format types:
-#   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
-#   @ts    Relative timestamp (e.g., "2026-03-03T01:15:05Z" -> "5m", "1h15m")
-#   @mem   Memory quantity normalization (e.g., "1974266625" -> "1.8Gi", "32272432Ki" -> "30.8Gi")
+#   qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
+#   ts    Relative timestamp (e.g., "2026-03-03T01:15:05Z" -> "5m", "1h15m")
+#   mem   Memory quantity normalization (e.g., "1974266625" -> "1.8Gi", "32272432Ki" -> "30.8Gi")
 
 set -euo pipefail
 
@@ -148,6 +169,62 @@ for spec in "$@"; do
   spec="${spec%"${spec##*[![:space:]]}"}"
   [[ -z "${spec}" ]] && continue
 
+  # JSON spec form — one object per column.
+  if [[ "${spec}" == "{"* ]]; then
+    # Use ASCII Unit Separator (\x1F) — read collapses consecutive
+    # whitespace IFS chars, so a tab separator would lose empty fields.
+    if ! json_fields=$(jq -r '
+      [.header // "", .path // "", .foreach // "",
+       .key // "", .value // "", .format // ""] | join("")
+    ' <<<"${spec}" 2>/dev/null); then
+      echo "kubectl-formatter: invalid JSON spec: ${spec}" >&2
+      exit 1
+    fi
+    IFS=$'\x1f' read -r hdr j_path j_foreach j_key j_value j_fmt <<<"${json_fields}"
+
+    if [[ -z "${hdr}" ]]; then
+      echo "kubectl-formatter: JSON spec missing 'header': ${spec}" >&2
+      exit 1
+    fi
+    if [[ -n "${j_path}" && -n "${j_foreach}" ]]; then
+      echo "kubectl-formatter: JSON spec has both 'path' and 'foreach': ${spec}" >&2
+      exit 1
+    fi
+    if [[ -z "${j_path}" && -z "${j_foreach}" ]]; then
+      echo "kubectl-formatter: JSON spec needs 'path' or 'foreach': ${spec}" >&2
+      exit 1
+    fi
+    if [[ -n "${j_foreach}" && -z "${j_value}" ]]; then
+      echo "kubectl-formatter: JSON spec with 'foreach' needs 'value': ${spec}" >&2
+      exit 1
+    fi
+    if [[ -n "${j_key}" && -z "${j_foreach}" ]]; then
+      echo "kubectl-formatter: JSON spec has 'key' without 'foreach': ${spec}" >&2
+      exit 1
+    fi
+
+    case "${j_fmt}" in
+      qty)  leaf_fmt=" | normalize_qty" ;;
+      ts)   leaf_fmt=" | relative_ts" ;;
+      mem)  leaf_fmt=" | normalize_mem" ;;
+      "")   leaf_fmt="" ;;
+      *)    echo "kubectl-formatter: unknown format '${j_fmt}': ${spec}" >&2; exit 1 ;;
+    esac
+
+    header+="${hdr}\t"
+
+    if [[ -n "${j_foreach}" ]]; then
+      if [[ -n "${j_key}" ]]; then
+        jq_fields+="(getpath_str(\"${j_foreach}\") // [] | if type == \"array\" then . else [] end | map((getpath_str(\"${j_key}\") // \"\" | tostring) + \":\" + (getpath_str(\"${j_value}\") // \"\" | tostring${leaf_fmt})) | join(\", \")),"
+      else
+        jq_fields+="(getpath_str(\"${j_foreach}\") // [] | if type == \"array\" then . else [] end | map(getpath_str(\"${j_value}\") // \"\" | tostring${leaf_fmt}) | join(\", \")),"
+      fi
+    else
+      jq_fields+="(getpath_str(\"${j_path}\") // \"\" | tostring${leaf_fmt}),"
+    fi
+    continue
+  fi
+
   # Parse optional HEADER: prefix
   custom_header=""
   rest="${spec}"
@@ -181,14 +258,14 @@ for spec in "$@"; do
   header+="${h}\t"
 
   # Build jq accessor with optional format.
-  # Wildcard paths render per-leaf and join with ",".
+  # Wildcard paths render per-leaf and join with ", ".
   if [[ "${field_path}" == *"[*]"* ]]; then
     leaves="(get_values(\"${field_path}\") | map(tostring"
     case "${fmt}" in
-      qty)  jq_fields+="${leaves} | normalize_qty) | join(\",\"))," ;;
-      ts)   jq_fields+="${leaves} | relative_ts) | join(\",\"))," ;;
-      mem)  jq_fields+="${leaves} | normalize_mem) | join(\",\"))," ;;
-      "")   jq_fields+="${leaves}) | join(\",\"))," ;;
+      qty)  jq_fields+="${leaves} | normalize_qty) | join(\", \"))," ;;
+      ts)   jq_fields+="${leaves} | relative_ts) | join(\", \"))," ;;
+      mem)  jq_fields+="${leaves} | normalize_mem) | join(\", \"))," ;;
+      "")   jq_fields+="${leaves}) | join(\", \"))," ;;
       *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
     esac
   else
