@@ -6,11 +6,16 @@
 #
 # Field spec format: [HEADER:]field_path[@format_type]
 #
+# Path syntax: dot-separated segments. Numeric segments index arrays.
+# A segment ending in [*] iterates that array and continues walking each
+# element; the leaves are joined with "," in the output cell.
+#
 # Examples:
-#   namespace                     -> header: NAMESPACE,    field: namespace
-#   IMAGE:spec.containers.0.image -> header: IMAGE,        field: spec.containers.0.image
-#   cpu_request@qty               -> header: CPU-REQUEST,  field: cpu_request, format: qty
-#   CPU:spec.cpu@qty              -> header: CPU,          field: spec.cpu,    format: qty
+#   namespace                              -> header: NAMESPACE,    field: namespace
+#   IMAGE:spec.containers.0.image          -> header: IMAGE,        field: spec.containers.0.image
+#   cpu_request@qty                        -> header: CPU-REQUEST,  field: cpu_request, format: qty
+#   CPU:spec.cpu@qty                       -> header: CPU,          field: spec.cpu,    format: qty
+#   IMAGES:spec.containers[*].image        -> header: IMAGES,       per-container images joined with ","
 #
 # Format types:
 #   @qty   Kubernetes quantity normalization (e.g., 10m -> 0.010)
@@ -116,6 +121,23 @@ def getpath_str(p):
   reduce (p | split(".")[]) as $key
     (.; if $key | test("^[0-9]+$") then .[$key | tonumber] // null
         else .[$key] // null end);
+def get_values(p):
+  # Returns an array of non-null leaf values for path p.
+  # A path segment ending in [*] iterates that array element-wise.
+  def safe_step($k):
+    if . == null then null
+    elif (type == "array") and ($k | test("^-?[0-9]+$")) then .[$k | tonumber]
+    elif type == "object" then .[$k]
+    else null end;
+  reduce (p | split(".")[]) as $seg ([.];
+    if $seg | endswith("[*]") then
+      (($seg | rtrimstr("[*]")) as $k |
+       (if $k == "" then . else map(safe_step($k)) end)
+       | map(.[]?))
+    else
+      map(safe_step($seg))
+    end
+  ) | map(select(. != null));
 '
 
 header=""
@@ -158,22 +180,49 @@ for spec in "$@"; do
   fi
   header+="${h}\t"
 
-  # Build jq accessor with optional format
-  accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
-  case "${fmt}" in
-    qty)  jq_fields+="${accessor} | normalize_qty)," ;;
-    ts)   jq_fields+="${accessor} | relative_ts)," ;;
-    mem)  jq_fields+="${accessor} | normalize_mem)," ;;
-    "")   jq_fields+="${accessor})," ;;
-    *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
-  esac
+  # Build jq accessor with optional format.
+  # Wildcard paths render per-leaf and join with ",".
+  if [[ "${field_path}" == *"[*]"* ]]; then
+    leaves="(get_values(\"${field_path}\") | map(tostring"
+    case "${fmt}" in
+      qty)  jq_fields+="${leaves} | normalize_qty) | join(\",\"))," ;;
+      ts)   jq_fields+="${leaves} | relative_ts) | join(\",\"))," ;;
+      mem)  jq_fields+="${leaves} | normalize_mem) | join(\",\"))," ;;
+      "")   jq_fields+="${leaves}) | join(\",\"))," ;;
+      *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
+    esac
+  else
+    accessor="(getpath_str(\"${field_path}\") // \"\" | tostring"
+    case "${fmt}" in
+      qty)  jq_fields+="${accessor} | normalize_qty)," ;;
+      ts)   jq_fields+="${accessor} | relative_ts)," ;;
+      mem)  jq_fields+="${accessor} | normalize_mem)," ;;
+      "")   jq_fields+="${accessor})," ;;
+      *)    echo "Unknown format type: @${fmt}" >&2; exit 1 ;;
+    esac
+  fi
 done
 
 # Remove trailing comma
 jq_fields="${jq_fields%,}"
 
-# Run jq and format with column -t
+# Run jq and align columns. We can't use `column -t -s $'\t'` here because BSD
+# column (macOS) silently collapses empty fields, shifting later cells leftward.
 {
   printf '%b\n' "${header%\\t}"
   jq -r "${jq_helpers} .items[] | [${jq_fields}] | @tsv"
-} | column -t
+} | awk 'BEGIN { FS = OFS = "\t" }
+{
+  lines[NR] = $0
+  for (i = 1; i <= NF; i++) if (length($i) > w[i]) w[i] = length($i)
+}
+END {
+  for (n = 1; n <= NR; n++) {
+    nf = split(lines[n], f, FS)
+    for (i = 1; i <= nf; i++) {
+      if (i < nf) printf "%-*s", w[i] + 2, f[i]
+      else printf "%s", f[i]
+    }
+    printf "\n"
+  }
+}'
