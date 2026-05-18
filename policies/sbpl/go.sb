@@ -1,0 +1,30 @@
+;; go.sb - Seatbelt profile for Go language development.
+;; Extends common.sb with read/exec on the Go toolchain and
+;; read/write on Go's module/build caches.
+;;
+;; Example: `crated go build ./...`, `crated go test ./...`, `crated go vet ./...`
+
+(version 1)
+(deny default)
+
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/common.sb"))
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/homebrew.sb"))
+
+;; Go toolchain (Homebrew install).
+;; GOROOT lives under Cellar/go/<version>/libexec; the stable symlink at
+;; /opt/homebrew/opt/go resolves into it.
+(allow file-read*
+       file-map-executable
+       process-exec
+       (subpath "/opt/homebrew/Cellar/go")
+       (subpath "/opt/homebrew/opt/go"))
+
+;; GOPATH (covers ~/go/bin, GOMODCACHE at ~/go/pkg/mod, sumdb)
+;; and GOCACHE
+(allow file-read*
+       file-write*
+       (home-subpath "/go")
+       (home-subpath "/Library/Caches/go-build"))
+
+;; Module fetch, VCS proxy, sumdb, telemetry
+(allow network-outbound)

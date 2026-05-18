@@ -1,0 +1,26 @@
+;; python-common.sb - Shared seatbelt fragment for Python development.
+;; Imported by python.sb and uv.sb. Grants read/exec on Homebrew
+;; Python installs and read/write on uv/pip caches.
+
+(version 1)
+(deny default)
+
+;; Homebrew Python installs across versions (python@3.11, python@3.12, ...).
+;; Regexes accept any version suffix so new minor versions work without edits.
+(allow file-read*
+       file-map-executable
+       process-exec
+       (regex "^/opt/homebrew/Cellar/python@[0-9.]+(/|$)")
+       (regex "^/opt/homebrew/opt/python@[0-9.]+(/|$)")
+       (subpath "/opt/homebrew/Frameworks/Python.framework")
+       (regex "^/opt/homebrew/lib/python[0-9.]+(/|$)"))
+
+;; uv cache, uv data dir for managed Python installs, and pip cache fallback.
+(allow file-read*
+       file-write*
+       (home-subpath "/.cache/uv")
+       (home-subpath "/.local/share/uv")
+       (home-subpath "/Library/Caches/pip"))
+
+;; PyPI, package indexes, and managed-interpreter downloads
+(allow network-outbound)
