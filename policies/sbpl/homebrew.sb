@@ -1,0 +1,12 @@
+;; homebrew.sb - Shared seatbelt fragment for Homebrew binary access.
+;; Imported by language-specific profiles (go.sb, python.sb, uv.sb).
+
+(version 1)
+(deny default)
+
+;; Homebrew binary roots used by language toolchains
+(allow file-read*
+       file-map-executable
+       process-exec
+       (subpath "/opt/homebrew/bin")
+       (subpath "/opt/homebrew/sbin"))

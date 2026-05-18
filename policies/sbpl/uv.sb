@@ -1,0 +1,9 @@
+;; uv.sb - Seatbelt profile entry for `crated uv ...`.
+;; All rules live in python-common.sb (shared with python.sb).
+
+(version 1)
+(deny default)
+
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/common.sb"))
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/homebrew.sb"))
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/python-common.sb"))
