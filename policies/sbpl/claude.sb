@@ -44,8 +44,3 @@
        (global-name "com.apple.securityd.xpc")
        (global-name "com.apple.security.agent")
        (global-name "com.apple.securityd"))
-
-;; TODO(ripta): restrict outbound connections using a proxy (squid) or
-;;              host-based firewall (Little Snitch, Radio Silence, Lulu),
-;;              instead of allowing all egress
-(allow network-outbound)

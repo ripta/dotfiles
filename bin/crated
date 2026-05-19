@@ -22,6 +22,21 @@ then
   exit 1
 fi
 
+# Sandboxed tools have no general outbound network access; HTTP(S) egress
+# routes through the Squid proxy on loopback (see policies/squid/). Fail fast
+# with a useful message rather than letting the tool's request hang.
+if ! (echo >/dev/tcp/127.0.0.1/3128) 2>/dev/null
+then
+  echo "Error: Squid proxy not reachable on 127.0.0.1:3128" >&2
+  echo "Start it with:" >&2
+  echo "  squid -f \"${DOTFILES:-${HOME}/.dotfiles}/policies/squid/squid.conf\"" >&2
+  exit 1
+fi
+
+export HTTPS_PROXY=http://127.0.0.1:3128
+export HTTP_PROXY=http://127.0.0.1:3128
+export NO_PROXY=localhost,127.0.0.1
+
 # Execute command
 echo "Activated profile '${profile_path}'" 2>&1
 exec sandbox-exec -f "${profile_path}" -D "HOME=${HOME}" -D "PROJECT_PATH=$(pwd)" "$@"
