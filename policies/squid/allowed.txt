@@ -1,0 +1,24 @@
+# allowed.txt - dstdomain ACL entries for squid.conf.
+#
+# Format: one hostname per line. Blank lines and `#` comments are ignored.
+#   .example.com      matches example.com and every subdomain
+#   foo.example.com   matches that exact host only
+#
+# Edits take effect after:  squid -k reconfigure -f <path-to-squid.conf>
+
+# Anthropic API and Claude Code endpoints
+.anthropic.com
+
+# OpenAI / Codex
+.openai.com
+
+# GitHub raw content and release binary redirect target
+raw.githubusercontent.com
+objects.githubusercontent.com
+
+# Go module proxy, sumdb, telemetry
+.golang.org
+
+# PyPI and package hosting (incl. uv-managed interpreter metadata)
+.pypi.org
+.pythonhosted.org

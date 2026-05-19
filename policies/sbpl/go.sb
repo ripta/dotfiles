@@ -25,6 +25,3 @@
        file-write*
        (home-subpath "/go")
        (home-subpath "/Library/Caches/go-build"))
-
-;; Module fetch, VCS proxy, sumdb, telemetry
-(allow network-outbound)

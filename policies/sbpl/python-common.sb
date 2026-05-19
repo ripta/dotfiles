@@ -21,6 +21,3 @@
        (home-subpath "/.cache/uv")
        (home-subpath "/.local/share/uv")
        (home-subpath "/Library/Caches/pip"))
-
-;; PyPI, package indexes, and managed-interpreter downloads
-(allow network-outbound)
