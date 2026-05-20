@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#
+# Normalize a mixed stream of JSON values and free-form text into NDJSON,
+# then pipe through jq. Non-JSON lines are emitted as JSON strings so jq
+# does not die on them. Pretty-printed JSON spanning multiple lines is
+# parsed as a single value.
+#
+# Any arguments are forwarded to jq. With no arguments, jq runs as `.`.
+
+set -euo pipefail
+
+normalize() {
+  exec python3 -c '
+import json, sys
+
+dec = json.JSONDecoder()
+buf = sys.stdin.read()
+i, n = 0, len(buf)
+out = sys.stdout
+
+def emit(v):
+    out.write(json.dumps(v))
+    out.write("\n")
+
+def emit_text(s):
+    s = s.rstrip()
+    if s.strip():
+        emit({"@text": s})
+
+while i < n:
+    while i < n and buf[i] in "\r\n":
+        i += 1
+    if i >= n:
+        break
+    nl = buf.find("\n", i)
+    line_end = n if nl == -1 else nl
+    j = i
+    while j < line_end and buf[j] in " \t":
+        j += 1
+    # Only attempt multi-line JSON when a line opens with { or [.
+    if j < line_end and buf[j] in "{[":
+        try:
+            obj, end = dec.raw_decode(buf, j)
+            emit(obj)
+            i = end
+            continue
+        except json.JSONDecodeError:
+            pass
+    # Otherwise, accept a JSON value only if it occupies the whole line.
+    line = buf[j:line_end].rstrip()
+    consumed = False
+    if line:
+        try:
+            obj, end = dec.raw_decode(line)
+            if end == len(line):
+                emit(obj)
+                consumed = True
+        except json.JSONDecodeError:
+            pass
+    if not consumed:
+        emit_text(buf[i:line_end])
+    i = line_end + 1 if nl != -1 else n
+'
+}
+
+if [[ $# -eq 0 ]]; then
+  normalize | exec jq .
+else
+  normalize | exec jq "$@"
+fi
