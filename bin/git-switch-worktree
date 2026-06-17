@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# git-switch-worktree
+#
+# fzf-pick a git worktree and print its path on stdout. All UI/diagnostics go
+# to stderr so stdout stays clean for the wrapper.
+
+list-worktrees() {
+  local current path="" branch=""
+  current="$(git rev-parse --show-toplevel 2>/dev/null)"
+  git worktree list --porcelain | while IFS= read -r line; do
+    case "${line}" in
+      "worktree "*) path="${line#worktree }" ;;
+      "branch "*)   branch="${line#branch refs/heads/}" ;;
+      "detached")   branch="(detached)" ;;
+      "")
+        [[ "${path}" != "${current}" ]] \
+          && printf "%s\t%s\n" "${path}" "${branch:-(bare)}"
+        path="" branch=""
+        ;;
+      *) ;;
+    esac
+  done
+}
+
+choose-worktree() {
+  local selections
+  selections="$(list-worktrees | column -t -s$'\t')" || return 1
+  [[ -n "${selections}" ]] || return 2
+
+  fzf --ansi \
+    --preview "echo {1} | xargs -I@ git -C @ log -${LINES:-20} --oneline --decorate" \
+    --preview-window 'right:60%' \
+    <<<"${selections}"
+}
+
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "git-switch-worktree: not inside a git repository" >&2
+  exit 1
+fi
+
+sel="$(choose-worktree)"
+case "$?" in
+  2)
+    echo "git-switch-worktree: no worktrees found" >&2
+    exit 1
+    ;;
+  *) ;;
+esac
+
+[[ -n "${sel}" ]] || exit 1
+echo "${sel%% *}"

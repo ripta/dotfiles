@@ -122,6 +122,10 @@ header=""
 jq_fields=""
 
 for spec in "$@"; do
+  spec="${spec#"${spec%%[![:space:]]*}"}"
+  spec="${spec%"${spec##*[![:space:]]}"}"
+  [[ -z "${spec}" ]] && continue
+
   # Parse optional HEADER: prefix
   custom_header=""
   rest="${spec}"
