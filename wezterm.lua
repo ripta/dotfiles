@@ -13,8 +13,8 @@ config.initial_rows = 40
 
 config.window_padding = {
   bottom = 4,
-  left = 2,
-  right = 2,
+  left = 12,
+  right = 12,
 }
 
 config.disable_default_key_bindings = true
