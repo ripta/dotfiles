@@ -1,16 +1,50 @@
 #!/usr/bin/env bash
 #
-# Parse JWT into a JSON structure.
+# Parse a JWT into a JSON structure.
+#
+# Handles both JOSE serializations:
+#
+#   - JWS (signed, 3 segments): the payload is base64url and gets decoded.
+#   - JWE (encrypted, 5 segments): only the header is readable.
+#     The payload is ciphertext, which cna't be decoded without the key.
 
-exec jq -Rr 'split(".") | {
-  header: (.[0] | @base64d | fromjson),
-  payload: (.[1] | @base64d | fromjson | 
+# Oh, I hate myself here.
+exec jq -Rr '
+  # Decode a base64url segment to its raw string.
+  def b64url_decode: gsub("-";"+") | gsub("_";"/") | @base64d;
+
+  # Decode a base64url segment as JSON.
+  def b64url_json: b64url_decode | fromjson;
+
+  # Turn common numeric date claims into readable timestamps.
+  def humanize_dates:
     with_entries(
-      if (.key | test("^(iat|exp|nbf|auth_time)$")) and (.value | type == "number") 
-      then .value |= todate 
-      else . 
+      if (.key | test("^(iat|exp|nbf|auth_time)$")) and (.value | type == "number")
+      then .value |= todate
+      else .
       end
-    )
-  ),
-  signature: .[2]
-}'
+    );
+
+  split(".") as $parts
+  | ($parts | length) as $n
+  | if $n == 3 then
+      {
+        type: "JWS",
+        header: ($parts[0] | b64url_json),
+        payload: ($parts[1] | b64url_json | humanize_dates),
+        signature: $parts[2]
+      }
+    elif $n == 5 then
+      {
+        type: "JWE",
+        header: ($parts[0] | b64url_json),
+        note: "Encrypted token. The payload cannot be decoded without the key.",
+        encrypted_key: $parts[1],
+        iv: $parts[2],
+        ciphertext: $parts[3],
+        tag: $parts[4]
+      }
+    else
+      { error: "Not a JWT: expected 3 segments (JWS) or 5 (JWE), got \($n)." }
+    end
+'
