@@ -1752,6 +1752,9 @@
   #              seen the warning, or if you are unsure what this all means.
   typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
 
+  # p10k rebuilds PS1 from scratch each precmd, so it's gotta handle OSC 133 marks itself
+  typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
+
   # Hot reload allows you to change POWERLEVEL9K options after Powerlevel10k has been initialized.
   # For example, you can type POWERLEVEL9K_BACKGROUND=red and see your prompt turn red. Hot reload
   # can slow down prompt by 1-2 milliseconds, so it's better to keep it turned off unless you
