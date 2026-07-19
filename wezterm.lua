@@ -27,7 +27,8 @@ local copy_last_command_and_output = wezterm.action_callback(function(window, pa
   if not (input and output) then
     return
   end
-  window:copy_to_clipboard(pane:get_text_from_region(input.start_x, input.start_y, output.end_x, output.end_y), 'Clipboard')
+  local text = pane:get_text_from_region(input.start_x, input.start_y, output.end_x, output.end_y)
+  window:copy_to_clipboard('❯ ' .. text, 'Clipboard')
 end)
 
 config.color_scheme = 'Catppuccin Latte'
