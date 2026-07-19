@@ -58,6 +58,9 @@ then
     source $HOME/.zshprerc
 fi
 
+# p10k emits its own OSC 133 marks, see zsh-custom/styles/normal.zsh
+export WEZTERM_SHELL_SKIP_SEMANTIC_ZONES=1
+
 source $ZSH/oh-my-zsh.sh
 export PATH=/usr/local/sbin:$PATH
 

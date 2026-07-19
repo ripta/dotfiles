@@ -3,6 +3,33 @@ local wezterm = require 'wezterm'
 local act = wezterm.action
 local config = wezterm.config_builder()
 
+local function copy_last_zone(zone_type)
+  return wezterm.action_callback(function(window, pane)
+    local zones = pane:get_semantic_zones(zone_type)
+    if #zones == 0 then
+      return
+    end
+    window:copy_to_clipboard(pane:get_text_from_semantic_zone(zones[#zones]), 'Clipboard')
+  end)
+end
+
+local copy_last_command_and_output = wezterm.action_callback(function(window, pane)
+  local zones = pane:get_semantic_zones()
+  local input, output
+  for i = #zones, 1, -1 do
+    if not output and zones[i].semantic_type == 'Output' then
+      output = zones[i]
+    elseif output and zones[i].semantic_type == 'Input' then
+      input = zones[i]
+      break
+    end
+  end
+  if not (input and output) then
+    return
+  end
+  window:copy_to_clipboard(pane:get_text_from_region(input.start_x, input.start_y, output.end_x, output.end_y), 'Clipboard')
+end)
+
 config.color_scheme = 'Catppuccin Latte'
 
 config.font = wezterm.font('MesloLGS NF')
@@ -82,6 +109,7 @@ config.keys = {
   { key = 'F', mods = 'SHIFT|CTRL', action = act.Search 'CurrentSelectionOrEmptyString' },
   { key = 'H', mods = 'CTRL', action = act.HideApplication },
   { key = 'H', mods = 'SHIFT|CTRL', action = act.HideApplication },
+  { key = 'I', mods = 'SHIFT|CTRL', action = copy_last_zone 'Input' },
   { key = 'K', mods = 'CTRL', action = act.ClearScrollback 'ScrollbackOnly' },
   { key = 'K', mods = 'SHIFT|CTRL', action = act.ClearScrollback 'ScrollbackOnly' },
   { key = 'L', mods = 'CTRL', action = act.ShowDebugOverlay },
@@ -90,6 +118,7 @@ config.keys = {
   { key = 'M', mods = 'SHIFT|CTRL', action = act.Hide },
   { key = 'N', mods = 'CTRL', action = act.SpawnWindow },
   { key = 'N', mods = 'SHIFT|CTRL', action = act.SpawnWindow },
+  { key = 'O', mods = 'SHIFT|CTRL', action = copy_last_zone 'Output' },
   -- { key = 'P', mods = 'CTRL', action = act.ActivateCommandPalette },
   { key = 'P', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
   { key = 'Q', mods = 'CTRL', action = act.QuitApplication },
@@ -106,6 +135,7 @@ config.keys = {
   { key = 'W', mods = 'SHIFT|CTRL', action = act.CloseCurrentTab{ confirm = true } },
   -- { key = 'X', mods = 'CTRL', action = act.ActivateCopyMode },
   { key = 'X', mods = 'SHIFT|CTRL', action = act.ActivateCopyMode },
+  { key = 'Y', mods = 'SHIFT|CTRL', action = copy_last_command_and_output },
   { key = 'Z', mods = 'CTRL', action = act.TogglePaneZoomState },
   { key = 'Z', mods = 'SHIFT|CTRL', action = act.TogglePaneZoomState },
   -- { key = '[', mods = 'SHIFT|SUPER', action = act.ActivateTabRelative(-1) },
@@ -120,6 +150,7 @@ config.keys = {
   { key = 'f', mods = 'SUPER', action = act.Search 'CurrentSelectionOrEmptyString' },
   { key = 'h', mods = 'SHIFT|CTRL', action = act.HideApplication },
   { key = 'h', mods = 'SUPER', action = act.HideApplication },
+  { key = 'i', mods = 'SHIFT|CTRL', action = copy_last_zone 'Input' },
   { key = 'k', mods = 'SHIFT|CTRL', action = act.ClearScrollback 'ScrollbackOnly' },
   { key = 'k', mods = 'SUPER', action = act.ClearScrollback 'ScrollbackOnly' },
   { key = 'l', mods = 'SHIFT|CTRL', action = act.ShowDebugOverlay },
@@ -127,6 +158,7 @@ config.keys = {
   { key = 'm', mods = 'SUPER', action = act.Hide },
   { key = 'n', mods = 'SHIFT|CTRL', action = act.SpawnWindow },
   { key = 'n', mods = 'SUPER', action = act.SpawnWindow },
+  { key = 'o', mods = 'SHIFT|CTRL', action = copy_last_zone 'Output' },
   { key = 'p', mods = 'SHIFT|CTRL', action = act.ActivateCommandPalette },
   -- { key = 'q', mods = 'SHIFT|CTRL', action = act.QuitApplication },
   { key = 'q', mods = 'SUPER', action = act.QuitApplication },
@@ -140,6 +172,7 @@ config.keys = {
   { key = 'w', mods = 'SHIFT|CTRL', action = act.CloseCurrentTab{ confirm = true } },
   { key = 'w', mods = 'SUPER', action = act.CloseCurrentTab{ confirm = true } },
   { key = 'x', mods = 'SHIFT|CTRL', action = act.ActivateCopyMode },
+  { key = 'y', mods = 'SHIFT|CTRL', action = copy_last_command_and_output },
   { key = 'z', mods = 'SHIFT|CTRL', action = act.TogglePaneZoomState },
   -- { key = '{', mods = 'SUPER', action = act.ActivateTabRelative(-1) },
   -- { key = '{', mods = 'SHIFT|SUPER', action = act.ActivateTabRelative(-1) },
