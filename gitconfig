@@ -149,6 +149,7 @@
     saa = stash apply           ;   apply stash onto working tree
     sal = stash list            ;   list stashes
     sap = stash pop             ;   pop goes the stash
+    sbc = sign-branch-commits   ; GPG-sign (-S) all branch-local commits
     sh = show                   ; show a change
     shc = show --color=always   ;   always with color
     shs = show --stat           ;   list the files changes

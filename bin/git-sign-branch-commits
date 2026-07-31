@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# Cryptographically sign (-S) every commit unique to the current branch,
+# i.e., `merge-base(HEAD, upstream)..HEAD`.
+#
+# The upstream defaults to origin/main.
+
+exec git rebase -S -f "$(git merge-base HEAD "${1:-origin/main}")"
