@@ -125,7 +125,6 @@
     rba = rebase --abort        ;   abort
     rbc = rebase --continue     ;   continue
     rbi = rebase -i             ;   in interactive mode
-    rbia = rebase -i --autosquash
     rbis = rebase -i -S         ;     signing commits
     rbs = rebase --skip         ;   skip change
     re = remote -v              ; remote destinations
