@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+sed -E 's/  +/\t/g' | jq -Rsn '
+  [
+    inputs
+    | split("\n")[]
+    | select(length > 0)
+    | split("\t")
+  ] as $rows
+  | $rows[0] as $headers
+  | $rows[1:]
+  | map(
+      . as $row
+      | reduce range(0; $headers | length) as $i ({}; .[$headers[$i]] = $row[$i])
+    )
+  | {
+    count: (. | length),
+    rows: .
+  }
+'
