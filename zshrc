@@ -88,3 +88,5 @@ alias chrome-debug='open -na "Google Chrome" --args \
     --remote-debugging-port=9222 \
     --user-data-dir="$HOME/Library/Application Support/Google/Chrome-Debug" \
     --no-first-run --no-default-browser-check'
+
+eval "$(atuin init zsh)"
