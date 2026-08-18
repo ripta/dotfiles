@@ -127,6 +127,7 @@
     rbi = rebase -i             ;   in interactive mode
     rbis = rebase -i -S         ;     signing commits
     rbs = rebase --skip         ;   skip change
+    rd = post-rebase-diff       ; range-diff across rebase or force-push, requires git-post-rebase-diff
     re = remote -v              ; remote destinations
     rea = remote add            ;   add
     rli = rev-list              ; rev-list

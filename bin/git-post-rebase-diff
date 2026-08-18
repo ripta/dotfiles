@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Range-diff a branch across a rebase or force-push, excluding changes to
+# whatever the branch was rebased onto.
+#
+# Usage:
+#   git post-rebase-diff               @{u}@{1} vs @{u}
+#   git post-rebase-diff <ref>         <ref>@{1} vs <ref>
+#   git post-rebase-diff <old> <new>   <old> vs <new>
+
+set -e
+
+case $# in
+    0) ref=$(git rev-parse --abbrev-ref '@{u}'); old="${ref}@{1}"; new=${ref} ;;
+    1) ref=$1; old="${ref}@{1}"; new=${ref} ;;
+    2) ref=$2; old=$1; new=$2 ;;
+    *) echo "usage: git post-rebase-diff [<ref> | <old> <new>]" >&2; exit 64 ;;
+esac
+
+remote=${ref%%/*}
+if [ "${remote}" = "${ref}" ] || ! git remote get-url "${remote}" >/dev/null 2>&1; then
+    remote=origin
+fi
+
+if mainline=$(git rev-parse --abbrev-ref "${remote}/HEAD" 2>/dev/null); then
+    exec git range-diff "$(git merge-base "${mainline}" "${old}")..${old}" \
+        "$(git merge-base "${mainline}" "${new}")..${new}"
+fi
+exec git range-diff "${old}...${new}"
