@@ -1,7 +1,7 @@
 # canonical-repository: git@r8y.org:rpasay/dotfiles.git
 # description: Ripta Pasay's gitconfig
 # author: Ripta Pasay <ripta@users.noreply.github.com>
-# last-modified: 2025-02-24T02:06:36-0800
+# last-modified: 2026-07-31T13:38:37-07:00
 # ---
 
 # Stop giving me warnings; I know what a non-ff push is, and I know what
@@ -125,8 +125,9 @@
     rba = rebase --abort        ;   abort
     rbc = rebase --continue     ;   continue
     rbi = rebase -i             ;   in interactive mode
-    rbia = rebase -i --autosquash
+    rbis = rebase -i -S         ;     signing commits
     rbs = rebase --skip         ;   skip change
+    rd = post-rebase-diff       ; range-diff across rebase or force-push, requires git-post-rebase-diff
     re = remote -v              ; remote destinations
     rea = remote add            ;   add
     rli = rev-list              ; rev-list
@@ -149,13 +150,11 @@
     saa = stash apply           ;   apply stash onto working tree
     sal = stash list            ;   list stashes
     sap = stash pop             ;   pop goes the stash
+    sbc = sign-branch-commits   ; GPG-sign (-S) all branch-local commits
     sh = show                   ; show a change
     shc = show --color=always   ;   always with color
     shs = show --stat           ;   list the files changes
     sma = submodule add         ; submodule add
-    sob = sign-off-branch       ; sign all commits on specific branch
-    stb = "!git sign-off-branch $(git symbolic-ref --short HEAD)"
-                                ;   on checked-out branch
     sr = symbolic-ref           ; symbolic ref dump
     srrm = symbolic-ref -d      ;   delete
     st = status --short         ; status of working tree
@@ -328,5 +327,7 @@
 	smudge = git-lfs smudge -- %f
 	required = true
 	process = git-lfs filter-process
-[url "git@git.ziprecruiter.com:"]
-	insteadOf = https://git.ziprecruiter.com/
+[credential "https://github.com"]
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = !gh auth git-credential

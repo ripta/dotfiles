@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Range-diff a branch across a rebase or force-push, excluding changes to
+# whatever the branch was rebased onto.
+#
+# Usage:
+#   git post-rebase-diff               @{u}@{1} vs @{u}; if the upstream has
+#                                      never moved (no @{1}), falls back to
+#                                      @{u} vs the current branch, i.e. the
+#                                      not-yet-pushed local rebase
+#   git post-rebase-diff <ref>         <ref>@{1} vs <ref>
+#   git post-rebase-diff <old> <new>   <old> vs <new>
+
+set -e
+
+case $# in
+    0)
+        ref=$(git rev-parse --abbrev-ref '@{u}')
+        if git rev-parse --verify "${ref}@{1}" >/dev/null 2>&1; then
+            old="${ref}@{1}"; new=${ref}
+        else
+            old=${ref}; new=$(git rev-parse --abbrev-ref HEAD)
+            echo "note: ${ref} has not moved since it was fetched; comparing it against ${new}" >&2
+        fi
+        ;;
+    1) ref=$1; old="${ref}@{1}"; new=${ref} ;;
+    2) ref=$2; old=$1; new=$2 ;;
+    *) echo "usage: git post-rebase-diff [<ref> | <old> <new>]" >&2; exit 64 ;;
+esac
+
+if [ "${old}" = "${ref}@{1}" ] && ! git rev-parse --verify "${old}" >/dev/null 2>&1; then
+    echo "git-post-rebase-diff: ${ref} has no earlier position in this clone's reflog," >&2
+    echo "so there is nothing to compare against (it hasn't moved since it was first fetched)." >&2
+    echo "If you know the old tip, pass it explicitly: git post-rebase-diff <old> ${ref}" >&2
+    exit 1
+fi
+
+remote=${ref%%/*}
+if [ "${remote}" = "${ref}" ] || ! git remote get-url "${remote}" >/dev/null 2>&1; then
+    remote=origin
+fi
+
+if mainline=$(git rev-parse --abbrev-ref "${remote}/HEAD" 2>/dev/null); then
+    exec git range-diff "$(git merge-base "${mainline}" "${old}")..${old}" \
+        "$(git merge-base "${mainline}" "${new}")..${new}"
+fi
+exec git range-diff "${old}...${new}"
