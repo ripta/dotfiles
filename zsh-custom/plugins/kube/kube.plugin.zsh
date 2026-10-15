@@ -1,4 +1,4 @@
-typeset -a KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
 
 function kt {
   local file=$1

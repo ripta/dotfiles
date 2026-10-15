@@ -80,7 +80,10 @@
 ;; Full access to the project directory (passed via PROJECT_PATH parameter)
 (allow file-read* file-write* file-map-executable process-exec (project-subpath))
 
-;; Network: localhost access and DNS lookups only
+;; Network: loopback (for the Squid proxy on 127.0.0.1:3128 — see
+;; policies/squid/) plus DNS, since some tools resolve before consulting
+;; HTTPS_PROXY. No other outbound egress is permitted; profiles that need
+;; the internet rely on the proxy via HTTPS_PROXY/HTTP_PROXY set by crated.
 (allow network* (remote ip "localhost:*"))
 (allow network-inbound (local ip))
 (allow network-outbound (remote udp "*:53") (remote tcp "*:53"))

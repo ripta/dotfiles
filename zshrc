@@ -58,6 +58,9 @@ then
     source $HOME/.zshprerc
 fi
 
+# p10k emits its own OSC 133 marks, see zsh-custom/styles/normal.zsh
+export WEZTERM_SHELL_SKIP_SEMANTIC_ZONES=1
+
 source $ZSH/oh-my-zsh.sh
 export PATH=/usr/local/sbin:$PATH
 
@@ -81,3 +84,9 @@ fi
 [[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env || true
 
 alias vi=nvim
+alias chrome-debug='open -na "Google Chrome" --args \
+    --remote-debugging-port=9222 \
+    --user-data-dir="$HOME/Library/Application Support/Google/Chrome-Debug" \
+    --no-first-run --no-default-browser-check'
+
+eval "$(atuin init zsh)"

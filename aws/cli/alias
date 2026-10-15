@@ -6,11 +6,11 @@ info = !f() {
     env | sort | grep -e AWS_ -e SHLVL | cat
   }; f
 
-login = sso login
+sin = sso login
 
-logout = sso logout
+sout = sso logout
 
-relog = !f() {
+sre = !f() {
     aws sso logout
     aws sso login
   }; f

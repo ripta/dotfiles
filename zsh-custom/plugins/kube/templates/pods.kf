@@ -1,5 +1,5 @@
 # pods.kf
-namespace
+NAMESPACE:metadata.namespace
 NAME:metadata.name
 AGE:metadata.creationTimestamp@ts
-cpu_request@qty
+{"header":"CPU-REQUEST","foreach":"spec.containers","key":"name","value":"resources.requests.cpu","format":"qty"}
