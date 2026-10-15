@@ -9,6 +9,7 @@
 #     The payload is ciphertext, which cna't be decoded without the key.
 
 # Oh, I hate myself here.
+# shellcheck disable=SC2016
 exec jq -Rr '
   # Decode a base64url segment to its raw string.
   def b64url_decode: gsub("-";"+") | gsub("_";"/") | @base64d;
