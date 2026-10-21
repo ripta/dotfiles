@@ -77,7 +77,12 @@
     gia = grep --ignore-case --recurse-submodules
                                 ;   across all submodules
     l = log                     ; logs of current branch
-    lc = local-commits          ;   unpushed changes - required git-local-commits
+    lc = "!f() { git log --left-right --oneline \"${1:-main}...${2:-HEAD}\"; }; f"
+                                ;   compare, showing both left (on main) and right (on HEAD)
+    lcl = "!f() { git log --left-only --oneline \"${1:-main}...${2:-HEAD}\"; }; f"
+                                ;     showing left (on main)
+    lcr = "!f() { git log --right-only --oneline \"${1:-main}...${2:-HEAD}\"; }; f"
+                                ;     showing right (on HEAD)
     ld = log --pretty=oneline --decorate
                                 ;   decorated
     lg = log --all --graph --decorate --oneline --simplify-by-decoration
