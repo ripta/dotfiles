@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Create an empty "8< --- snip ---" commit marking the end of work to
+# include in PRs and merges. Extra arguments are passed to `git commit`.
+
+exec git commit --allow-empty --signoff "$@" \
+  -m '8< --- snip ---' \
+  -m 'This separator marks the end of work. This commit should be excluded
+from PRs and merges.'
