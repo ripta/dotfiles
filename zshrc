@@ -89,4 +89,7 @@ alias chrome-debug='open -na "Google Chrome" --args \
     --user-data-dir="$HOME/Library/Application Support/Google/Chrome-Debug" \
     --no-first-run --no-default-browser-check'
 
-eval "$(atuin init zsh)"
+if (( $+commands[atuin] ))
+then
+  eval "$(atuin init zsh)"
+fi
