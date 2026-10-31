@@ -1,0 +1,1 @@
+javascript:(function()%7Bwindow.location%3Dwindow.location.origin%2Bwindow.location.pathname%3B%7D)()%3B
