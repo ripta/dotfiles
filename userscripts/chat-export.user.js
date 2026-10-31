@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name         Chat export
 // @namespace    https://github.com/ripta/dotfiles
-// @version      2.0.1
+// @version      2.1.0
 // @description  Export an AI chat conversation as text or PDF.
 // @match        https://www.google.com/*
 // @match        https://claude.ai/*
 // @match        https://chatgpt.com/*
 // @match        https://grok.com/*
 // @match        https://gemini.google.com/*
-// @require      https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.12.1/html2pdf.bundle.min.js#sha256=603aa7917180619f9ea2c5fc555169dd9e59f9461d3e67e1142f274cf02b30be
 // @grant        GM_registerMenuCommand
 // @noframes
 // @downloadURL  https://raw.githubusercontent.com/ripta/dotfiles/master/userscripts/chat-export.user.js
@@ -17,14 +16,12 @@
 
 // Export the current conversation from an AI chat site.
 //
-// Tampermonkey's menu gets up to three entries:
+// Tampermonkey's menu gets two entries:
 //
 //   - Export as text saves each message and each extra panel as a section
 //     of a .txt file.
-//   - Export as PDF (searchable) prints only the conversation through the
-//     browser's print dialog. Choose "Save as PDF" there.
-//   - Export as PDF (image) renders the conversation with html2pdf. The text
-//     in that PDF cannot be searched or copied.
+//   - Export as PDF prints only the conversation through the browser's
+//     print dialog. Choose "Save as PDF" there.
 //
 // Each site needs its own selectors in SITES. They depend on the site's
 // internal markup, so they break when the site changes. The export then
@@ -39,11 +36,6 @@
   //   - messages selects each message inside the container.
   //   - extras select side panels outside the container, such as artifacts
   //     or canvases. Missing ones are skipped.
-  //   - printOnly hides the image PDF entry on sites where html2pdf cannot
-  //     render. Gemini enforces Trusted Types, which blocks the
-  //     document.write that html2pdf uses. ChatGPT and Grok style with
-  //     modern color functions, such as oklab() and color(). html2pdf's
-  //     bundled html2canvas cannot parse them.
   const SITES = {
     'www.google.com': {
       container: () => document.querySelector('div[data-xid=aim-mars-turn-root]'),
@@ -64,13 +56,11 @@
       container: () => document.querySelector('#thread'),
       messages: 'section>div>div>div>div[data-message-author-role]',
       extras: ['section.popover>section'],
-      printOnly: true,
     },
     'grok.com': {
       container: () => document.querySelector('div[data-transcript-renderer]'),
       messages: 'div.message-bubble',
       extras: ['aside'],
-      printOnly: true,
     },
     'gemini.google.com': {
       container: () => document.querySelector('#chat-history'),
@@ -80,7 +70,6 @@
         'deep-research-immersive-panel>div.container',
         'extended-response-panel response-container',
       ],
-      printOnly: true,
     },
   };
 
@@ -144,7 +133,7 @@
     setTimeout(() => URL.revokeObjectURL(href), 10000);
   }
 
-  function exportSearchablePdf() {
+  function exportPdf() {
     const chat = findConversation();
     if (!chat) {
       return;
@@ -175,32 +164,6 @@
     print();
   }
 
-  function exportImagePdf() {
-    const chat = findConversation();
-    if (!chat) {
-      return;
-    }
-
-    // Each extra panel starts on a new page.
-    let worker = html2pdf().set({
-      margin: 5,
-      filename: `${timestamp()}.pdf`,
-      html2canvas: {scale: 2, logging: false},
-    }).from(chat.container).toPdf();
-
-    for (const el of chat.extras) {
-      worker = worker.get('pdf').then(pdf => pdf.addPage()).from(el).toContainer().toCanvas().toPdf();
-    }
-
-    worker.save().catch(err => {
-      console.error('Chat export failed to render the PDF', err);
-      alert(`Chat export failed to render the PDF: ${err}`);
-    });
-  }
-
   GM_registerMenuCommand('Export as text', exportText);
-  GM_registerMenuCommand('Export as PDF (searchable)', exportSearchablePdf);
-  if (!site.printOnly) {
-    GM_registerMenuCommand('Export as PDF (image)', exportImagePdf);
-  }
+  GM_registerMenuCommand('Export as PDF', exportPdf);
 })();
