@@ -1,0 +1,1 @@
+javascript:(function()%7Bdocument.documentElement.style.filter%3Ddocument.documentElement.style.filter%3F%22%22%3A%22invert(100%25)%20hue-rotate(180deg)%22%3B%7D)()%3B
