@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Chat export
 // @namespace    https://github.com/ripta/dotfiles
-// @version      2.0.0
+// @version      2.0.1
 // @description  Export an AI chat conversation as text or PDF.
 // @match        https://www.google.com/*
 // @match        https://claude.ai/*
@@ -41,10 +41,9 @@
   //     or canvases. Missing ones are skipped.
   //   - printOnly hides the image PDF entry on sites where html2pdf cannot
   //     render. Gemini enforces Trusted Types, which blocks the
-  //     document.write that html2pdf uses. ChatGPT's styles use oklab
-  //     colors, which html2pdf's bundled html2canvas cannot parse. Grok is
-  //     untested. The bookmarklet this came from could not load html2pdf
-  //     there.
+  //     document.write that html2pdf uses. ChatGPT and Grok style with
+  //     modern color functions, such as oklab() and color(). html2pdf's
+  //     bundled html2canvas cannot parse them.
   const SITES = {
     'www.google.com': {
       container: () => document.querySelector('div[data-xid=aim-mars-turn-root]'),
@@ -68,7 +67,7 @@
       printOnly: true,
     },
     'grok.com': {
-      container: () => document.querySelector('div#last-reply-container')?.parentElement,
+      container: () => document.querySelector('div[data-transcript-renderer]'),
       messages: 'div.message-bubble',
       extras: ['aside'],
       printOnly: true,
