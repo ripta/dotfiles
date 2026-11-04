@@ -262,6 +262,9 @@
 [github]
     user = ripta
 
+[gpg "ssh"]
+    allowedSignersFile = ~/.dotfiles/git_allowed_signers
+
 # Don't automatically garbage collect, because it will sometimes block
 # large operations for a long time. Run "git gc" to manually clean up.
 [gc]
