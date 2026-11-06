@@ -1,0 +1,1 @@
+javascript:(function()%7Bconst%20t%3Ddocument.querySelector('meta%5Bproperty%3D%22og%3Aimage%22%5D')%3Bt%3Fwindow.location%3Dt.getAttribute(%22content%22)%3Aalert(%22Page%20has%20no%20og%3Aimage%20attribute%20to%20redirect%20to.%22)%3B%7D)()%3B
