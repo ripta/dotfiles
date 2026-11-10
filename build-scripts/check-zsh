@@ -1,0 +1,44 @@
+#!/usr/bin/env zsh
+#
+# Syntax-checks zsh files and runs their tests. shellcheck does not support
+# zsh, so build-scripts/lint cannot cover these.
+#
+# Covers the directories in ZSH_DIRS: each *.zsh file is parsed with zsh -n,
+# and each *.test.zsh file is run. Add a directory once it passes.
+
+emulate -R zsh
+
+typeset -a ZSH_DIRS=(
+  zsh-custom/plugins/kube
+)
+
+cd ${${(%):-%x}:A:h:h} || exit
+
+integer failed=0
+local dir file
+
+for dir in $ZSH_DIRS
+do
+  for file in $dir/**/*.zsh(N.)
+  do
+    if zsh -n $file
+    then
+      print -r -- "ok    zsh -n $file"
+    else
+      print -r -- "FAIL  zsh -n $file"
+      (( failed++ ))
+    fi
+  done
+
+  for file in $dir/**/*.test.zsh(N.)
+  do
+    print -r -- "run   $file"
+    if ! zsh -f $file
+    then
+      print -r -- "FAIL  $file"
+      (( failed++ ))
+    fi
+  done
+done
+
+(( failed == 0 ))
