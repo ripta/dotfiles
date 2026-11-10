@@ -95,5 +95,25 @@ KUBE_CONFIG_DIRS=( $TMP/configs )
 }
 
 
+### exit status
+
+KUBE_STUB_STDERR="Error from server (NotFound)" KUBE_STUB_EXIT=1 kc_run get pods/missing
+assert_eq "get: kubectl failure exits non-zero" 1 $RC
+
+if (( $+commands[jq] )); then
+  KUBE_STUB_STDOUT='{"a":"b"}' kc_run get pods -o .a
+  assert_eq "get -o .field: success exits 0" 0 $RC
+  assert_eq "get -o .field: output is piped through jq" b "$OUT"
+
+  KUBE_STUB_STDERR="Error from server (NotFound)" KUBE_STUB_EXIT=1 kc_run get pods/missing -o .a
+  assert_eq "get -o .field: kubectl failure exits 1" 1 $RC
+
+  KUBE_STUB_STDOUT='{"a":"b"}' kc_run get pods -o '.['
+  assert_eq "get -o .field: jq failure exits non-zero" 1 "$(( RC != 0 ))"
+else
+  print -u2 "skip: jq not installed"
+fi
+
+
 print "passed: $PASSED, failed: $FAILED"
 (( FAILED == 0 ))

@@ -102,6 +102,9 @@ function prompt_kube_plugin() {
 #    JSON through kubectl-formatter with the field specs from the file.
 # 5. "kc get foo" sets a default --sort-by unless one was provided.
 function __kubectl_get {
+  # Without pipe_fail, a kubectl error piped into jq reports jq's success.
+  setopt local_options pipe_fail
+
   local -a args
   local i
   local tplfile
