@@ -95,6 +95,24 @@ KUBE_CONFIG_DIRS=( $TMP/configs )
 }
 
 
+### templates
+
+typeset -g TPL=${PLUGIN:h}/templates
+
+() {
+  local DOTFILES=/nonexistent
+  kc_run get crds
+  assert_ran "get: default template is found without DOTFILES" get crds -o custom-columns-file=$TPL/crds.tpl
+
+  kc_run get pods -o ^owners
+  assert_ran "get -o ^name: named template is found without DOTFILES" get pods -o custom-columns-file=$TPL/owners.tpl
+}
+
+kc_run get pods -o ^no-such-template
+assert_eq "get -o ^name: missing template exits 1" 1 $RC
+assert_eq "get -o ^name: missing template is not run" false "$( [[ -e $KUBE_STUB_LOG ]] && print true || print false )"
+
+
 ### exit status
 
 KUBE_STUB_STDERR="Error from server (NotFound)" KUBE_STUB_EXIT=1 kc_run get pods/missing

@@ -1,4 +1,5 @@
 typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+typeset -g __KUBE_TEMPLATE_DIR=${${(%):-%x}:A:h}/templates
 
 function kt {
   local file=$1
@@ -174,7 +175,7 @@ function __kubectl_get {
   then
     if [[ ${args[$output_idx]} == ^* ]]
     then
-      tplfile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#^}.tpl"
+      tplfile="${__KUBE_TEMPLATE_DIR}/${args[$output_idx]#^}.tpl"
       if [[ ! -f ${tplfile} ]]
       then
         echo "Error: template file not found ${tplfile}" >&2
@@ -184,7 +185,7 @@ function __kubectl_get {
       args[$output_idx]="custom-columns-file=${tplfile}"
     elif [[ ${args[$output_idx]} == @* ]]
     then
-      local kffile="${DOTFILES}/zsh-custom/plugins/kube/templates/${args[$output_idx]#@}.kf"
+      local kffile="${__KUBE_TEMPLATE_DIR}/${args[$output_idx]#@}.kf"
       if [[ ! -f ${kffile} ]]
       then
         echo "Error: formatter spec file not found ${kffile}" >&2
@@ -206,7 +207,7 @@ function __kubectl_get {
     fi
   elif [[ -n ${rsrc} ]]
   then
-    tplfile="${DOTFILES}/zsh-custom/plugins/kube/templates/${rsrc}.tpl"
+    tplfile="${__KUBE_TEMPLATE_DIR}/${rsrc}.tpl"
     if [[ -f ${tplfile} ]]
     then
       args=( "${args[@]}" "-o" "custom-columns-file=${tplfile}" )
