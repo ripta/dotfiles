@@ -112,7 +112,7 @@ function __kube_parse_args {
   __kube_pos_arg=()
 
   local -a out
-  local i=1 word name val rest letter scope arity
+  local i=1 word name rest letter scope arity
   while (( i <= $# ))
   do
     word=${argv[i]}
