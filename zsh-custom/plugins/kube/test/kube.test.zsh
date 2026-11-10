@@ -229,5 +229,62 @@ else
 fi
 
 
+### flag lists match the installed kubectl
+#
+# kubectl's shell completion (the hidden "__complete" command) lists each
+# flag's long name, followed by its one-letter form if it has one. It does
+# not say whether a flag takes a value, so that part of the lists is still
+# checked by hand. Set KUBE_TEST_KUBECTL to pick the kubectl binary.
+
+# Prints "name" or "name/x" for each flag of `kubectl __complete <args> -`.
+complete_flags() {
+  local line long
+  local -a found
+  KUBECONFIG=/dev/null $REAL_KUBECTL __complete "$@" - 2>/dev/null | while IFS=$'\t' read -r line _
+  do
+    case $line in
+      --*) [[ -n $long ]] && found+=( $long ); long=${line#--} ;;
+      -?)  found+=( $long/${line#-} ); long= ;;
+    esac
+  done
+  [[ -n $long ]] && found+=( $long )
+  print -rl -- ${(o)found}
+}
+
+# Usage: missing_flags <kubectl args> -- <plugin flag specs...>
+# Prints each flag kubectl lists that the plugin's specs lack, or lists with a
+# different one-letter form. Flags only the plugin lists are fine: they come
+# from other kubectl versions.
+missing_flags() {
+  local -a args
+  while [[ $1 != -- ]]; do args+=( "$1" ); shift; done
+  shift
+  local -a known
+  known=( ${@//=/} )
+  print -rl -- ${$(complete_flags $args):|known}
+}
+
+typeset -g REAL_KUBECTL=${KUBE_TEST_KUBECTL:-}
+if [[ -z $REAL_KUBECTL ]]; then
+  for candidate in ${(f)"$(whence -ap kubectl)"}; do
+    [[ $candidate == $TMP/* ]] && continue
+    if KUBECONFIG=/dev/null $candidate __complete get - >/dev/null 2>&1; then
+      REAL_KUBECTL=$candidate
+      break
+    fi
+  done
+fi
+
+if [[ -n $REAL_KUBECTL ]]; then
+  print "checking flag lists against $REAL_KUBECTL"
+  assert_eq "every global flag of $REAL_KUBECTL is listed" \
+    "" "$(missing_flags -- $__KUBE_GLOBAL_FLAGS)"
+  assert_eq "every get flag of $REAL_KUBECTL is listed" \
+    "" "$(missing_flags get -- $__KUBE_GLOBAL_FLAGS $__KUBE_GET_FLAGS)"
+else
+  print -u2 "skip: no kubectl whose completion works; set KUBE_TEST_KUBECTL"
+fi
+
+
 print "passed: $PASSED, failed: $FAILED"
 (( FAILED == 0 ))
