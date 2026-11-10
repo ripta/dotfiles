@@ -52,7 +52,25 @@ assert_ran() {
   if [[ ${(j:\0:)got} == ${(j:\0:)@} ]]; then
     pass
   else
-    fail "$desc" "expected: ${(q-)@}" "actual:   ${(q-)got}"
+    fail "$desc" "expected: ${(j: :)${(q-)@}}" "actual:   ${(j: :)${(q-)got}}"
+  fi
+}
+
+# Usage: assert_parsed <description> <expected args...> ::: <args...>
+# Parses <args> as kubectl get arguments and compares the normalized result.
+# Leaves the positional indices in PARSED_POS.
+typeset -ga PARSED_POS
+assert_parsed() {
+  local desc=$1; shift
+  local -a want __kube_args __kube_pos __kube_pos_arg
+  while [[ $1 != ::: ]]; do want+=( "$1" ); shift; done
+  shift
+  __kube_parse_args global,get "$@"
+  PARSED_POS=( $__kube_pos )
+  if [[ ${(j:\0:)__kube_args} == ${(j:\0:)want} && $#__kube_args == $#want ]]; then
+    pass
+  else
+    fail "$desc" "input:    ${(j: :)${(q-)@}}" "expected: ${(j: :)${(q-)want}}" "actual:   ${(j: :)${(q-)__kube_args}}"
   fi
 }
 
@@ -95,6 +113,84 @@ KUBE_CONFIG_DIRS=( $TMP/configs )
 }
 
 
+### argument parsing
+#
+# Each case matches how kubectl itself (spf13/pflag) reads the arguments,
+# checked against kubectl v1.32.
+
+assert_parsed "short flag, attached value"   --output=yaml ::: -oyaml
+assert_parsed "short flag, = value"          --output=yaml ::: -o=yaml
+assert_parsed "short flag, separate value"   --output=yaml ::: -o yaml
+assert_parsed "long flag, = value"           --output=yaml ::: --output=yaml
+assert_parsed "long flag, separate value"    --output=yaml ::: --output yaml
+assert_parsed "value may start with a dash"  --output=-A ::: -o -A
+assert_parsed "value may contain ="          --selector=app=web ::: -lapp=web
+assert_parsed "empty value"                  --output= ::: -o ''
+assert_parsed "stacked booleans"             --all-namespaces --watch ::: -Aw
+assert_parsed "stack ending in attached value" --all-namespaces --watch --output=name ::: -Awoname
+assert_parsed "stack ending in separate value" --all-namespaces --output=name ::: -Ao name
+assert_parsed "short boolean with = value"   --watch=false ::: -w=false
+assert_parsed "long boolean with = value"    --watch=false ::: --watch=false
+assert_parsed "global flag"                  --namespace=foo ::: -nfoo
+assert_parsed "global flag, long"            --context=prod ::: --context prod
+assert_parsed "verbosity"                    --v=6 ::: -v 6
+
+assert_parsed "boolean does not take the next word" --show-kind name ::: --show-kind name
+assert_eq "boolean does not take the next word: word is positional" 2 "$PARSED_POS"
+
+assert_parsed "positionals are kept in order" pods --output=name web ::: pods -oname web
+assert_eq "positionals are kept in order: indices" "1 3" "$PARSED_POS"
+
+assert_parsed "-- ends flags" --output=yaml -- -oname ::: -oyaml -- -oname
+assert_eq "-- ends flags: later words are positional" 3 "$PARSED_POS"
+
+assert_parsed "lone dash is positional" - ::: -
+assert_parsed "unknown short flag is left alone" -Ax ::: -Ax
+assert_parsed "unknown long flag is boolean" --frobnicate pods ::: --frobnicate pods
+assert_parsed "missing value is left for kubectl to report" pods -o ::: pods -o
+
+
+### kubectl get
+
+kc_run -n kube-system get events
+assert_ran "global flag before get" get --namespace=kube-system events --sort-by=.lastTimestamp
+
+kc_run --context prod get events
+assert_ran "long global flag before get" get --context=prod events --sort-by=.lastTimestamp
+
+kc_run get -l app=web nodes
+assert_ran "flag value is not the resource" get --selector=app=web nodes --sort-by=.metadata.creationTimestamp
+
+kc_run get --sort-by .metadata.name events
+assert_ran "explicit --sort-by is kept" get --sort-by=.metadata.name events
+
+kc_run get crds -oyaml
+assert_ran "attached -o replaces the default template" get crds --output=yaml
+
+kc_run get crds -o wide -o name
+assert_ran "last -o wins, as in kubectl" get crds --output=wide --output=name
+
+kc_run get events -- extra
+assert_ran "defaults go before --" get events --sort-by=.lastTimestamp -- extra
+
+kc_run get pods -n team/app_one
+assert_ran "namespace path is rewritten" get pods --namespace=team--app-one
+assert_eq "namespace path rewrite is reported" "kubectl get: rewriting namespace 'team/app_one' -> 'team--app-one'" "$ERR"
+
+kc_run -v 6 get events
+assert_ran "verbose get" get --v=6 events --sort-by=.lastTimestamp
+assert_eq "verbose get echoes the command" "+ kubectl get --v=6 events --sort-by=.lastTimestamp" "$ERR"
+
+kc_run --context prod describe pod web
+assert_ran "other commands pass through unchanged" --context prod describe pod web
+
+kc_run -n foo
+assert_ran "no command passes through unchanged" -n foo
+
+kc_run -- get pods
+assert_ran "a command after -- is not handled" -- get pods
+
+
 ### templates
 
 typeset -g TPL=${PLUGIN:h}/templates
@@ -102,10 +198,10 @@ typeset -g TPL=${PLUGIN:h}/templates
 () {
   local DOTFILES=/nonexistent
   kc_run get crds
-  assert_ran "get: default template is found without DOTFILES" get crds -o custom-columns-file=$TPL/crds.tpl
+  assert_ran "get: default template is found without DOTFILES" get crds --output=custom-columns-file=$TPL/crds.tpl
 
   kc_run get pods -o ^owners
-  assert_ran "get -o ^name: named template is found without DOTFILES" get pods -o custom-columns-file=$TPL/owners.tpl
+  assert_ran "get -o ^name: named template is found without DOTFILES" get pods --output=custom-columns-file=$TPL/owners.tpl
 }
 
 kc_run get pods -o ^no-such-template
