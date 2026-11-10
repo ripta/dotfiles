@@ -27,7 +27,7 @@ function kt {
 
   if [[ -f "$file" ]]
   then
-    export KUBECONFIG="$file"
+    export KUBECONFIG="${file:a}"
     return
   fi
 
@@ -40,6 +40,7 @@ function kt {
     fi
   done
   echo "Invalid KUBECONFIG: cannot find '$file'" >&2
+  return 1
 }
 
 
