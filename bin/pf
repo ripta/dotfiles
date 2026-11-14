@@ -1014,11 +1014,9 @@ EOF
                   coalesce(worktree_of, ''), coalesce(langs, ''),
                   last_change, files, coalesce(descr, '')
              FROM projects WHERE name = ${q};" \
-    | awk -F'\t' '
-        BEGIN {
-          n = split("name|kind|class|origin|worktree of|languages|" \
-                    "last change|tracked files|manifest description", label, "|")
-        }
+    | awk -F'\t' \
+        -v labels='name|kind|class|origin|worktree of|languages|last change|tracked files|manifest description' '
+        BEGIN { n = split(labels, label, "|") }
         { for (i = 1; i <= n; i++) if ($i != "") printf "%s: %s\n", label[i], $i }'
   echo
   echo "## README and ARCHITECTURE.md (truncated)"
