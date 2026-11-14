@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+#
+# Tests bin/pf against a fixture PF_ROOT in a temporary directory. Needs git,
+# jq, and sqlite3 with FTS5. It does not call Claude.
+
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+pf="${here}/bin/pf"
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/pf-test.XXXXXX")"
+# shellcheck disable=SC2064 # expand work now, while it is set
+trap "rm -rf '${work}'" EXIT
+
+export PF_ROOT="${work}/projects"
+export PF_DB="${work}/state/index.db"
+export PF_OWNERS="me"
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+export XDG_CONFIG_HOME="${work}/config"
+
+failed=0
+
+pass() {
+  printf 'ok    %s\n' "$1"
+}
+
+fail() {
+  printf 'FAIL  %s\n' "$1"
+  failed=$(( failed + 1 ))
+}
+
+# expect_match NAME TEXT PATTERN checks that TEXT matches the ERE PATTERN.
+expect_match() {
+  if grep -Eq -- "$3" <<<"$2"; then
+    pass "$1"
+  else
+    fail "$1"
+    printf '      wanted /%s/ in:\n%s\n' "$3" "$2" | sed 's/^/      /'
+  fi
+}
+
+expect_no_match() {
+  if grep -Eq -- "$3" <<<"$2"; then
+    fail "$1"
+    printf '      did not want /%s/ in:\n%s\n' "$3" "$2" | sed 's/^/      /'
+  else
+    pass "$1"
+  fi
+}
+
+new_repo() {
+  local dir="$1"
+  mkdir -p "${dir}"
+  git -C "${dir}" init -q -b main
+}
+
+commit_all() {
+  git -C "$1" add -A
+  git -C "$1" -c user.name=t -c user.email=t@example.com \
+    -c commit.gpgsign=false commit -q -m init
+}
+
+### Fixture
+
+mkdir -p "${PF_ROOT}"
+
+new_repo "${PF_ROOT}/alpha"
+cat >"${PF_ROOT}/alpha/README.md" <<'EOF'
+[![build](https://example.com/badge.svg)](https://example.com)
+
+# alpha
+
+Alpha is a **tiny** tool for [counting](https://example.com/x) sheep.
+It runs at night.
+
+## Install
+EOF
+# A README larger than a pipe buffer catches early-exit SIGPIPE failures.
+for _ in $(seq 1 3000); do
+  echo 'More words about sheep and the night sky.'
+done >>"${PF_ROOT}/alpha/README.md"
+echo 'ألفا' >"${PF_ROOT}/alpha/README.ar.md"
+echo 'module example.com/me/alpha' >"${PF_ROOT}/alpha/go.mod"
+commit_all "${PF_ROOT}/alpha"
+git -C "${PF_ROOT}/alpha" remote add origin git@github.com:me/alpha.git
+
+new_repo "${PF_ROOT}/forked"
+echo '{"description": "A forked widget"}' >"${PF_ROOT}/forked/package.json"
+commit_all "${PF_ROOT}/forked"
+git -C "${PF_ROOT}/forked" remote add origin git@github.com:me/forked.git
+git -C "${PF_ROOT}/forked" remote add upstream https://github.com/them/forked.git
+
+new_repo "${PF_ROOT}/secret"
+echo 'Secret clone.' >"${PF_ROOT}/secret/README.md"
+commit_all "${PF_ROOT}/secret"
+git -C "${PF_ROOT}/secret" remote add origin \
+  'https://token:SEKRIT-abc.def@example.com/other/secret.git'
+
+new_repo "${PF_ROOT}/setext"
+cat >"${PF_ROOT}/setext/README.md" <<'EOF'
+---
+title: front matter
+---
+Setext Title
+============
+
+> [!TIP]
+> A callout that is not the description.
+
+Setext is described here.
+EOF
+commit_all "${PF_ROOT}/setext"
+
+# A worktree whose main repo is gone. git rejects it outright.
+mkdir -p "${PF_ROOT}/orphan-wt"
+echo 'gitdir: /nonexistent/.git/worktrees/orphan' >"${PF_ROOT}/orphan-wt/.git"
+
+new_repo "${PF_ROOT}/nocommits"
+mkdir -p "${PF_ROOT}/emptyish"
+mkdir -p "${PF_ROOT}/notes-only"
+echo 'Thoughts about pelicans.' >"${PF_ROOT}/notes-only/pelicans.md"
+echo 'loose' >"${PF_ROOT}/loose.diff"
+
+mkdir -p "${PF_ROOT}/org"
+new_repo "${PF_ROOT}/org/child"
+echo 'Child of the org.' >"${PF_ROOT}/org/child/README.md"
+commit_all "${PF_ROOT}/org/child"
+git -C "${PF_ROOT}/alpha" worktree add -q --detach "${PF_ROOT}/org/alpha-wt"
+
+### Tests
+
+out="$("${pf}" ls 2>&1 || true)"
+expect_match "read commands fail before the first index" "${out}" 'no index'
+
+"${pf}" index 2>/dev/null
+pass "index runs"
+
+ls_out="$("${pf}" ls 2>&1)"
+expect_match "repo with an owner in PF_OWNERS is mine" "${ls_out}" '^alpha +repo +mine'
+expect_match "mine plus a foreign upstream is a fork" "${ls_out}" '^forked +repo +fork'
+expect_match "a foreign origin is third-party" "${ls_out}" '^secret +repo +third-party'
+expect_match "a repo with no remote is local" "${ls_out}" '^nocommits +repo +local'
+expect_match "an empty directory is empty" "${ls_out}" '^emptyish +empty'
+expect_match "a plain directory is dir" "${ls_out}" '^notes-only +dir'
+expect_match "a directory of repos is a group" "${ls_out}" '^org +group'
+expect_match "group children are indexed" "${ls_out}" '^org/child +repo'
+expect_match "worktrees are indexed" "${ls_out}" '^org/alpha-wt +worktree +mine'
+expect_match "top-level files are indexed" "${ls_out}" '^loose.diff +file'
+expect_match "a worktree of a missing repo still indexes" "${ls_out}" '^orphan-wt +worktree +local'
+expect_match "the blurb skips badges and headings" "${ls_out}" 'Alpha is a tiny tool for counting sheep'
+expect_match "a manifest description fills in" "${ls_out}" 'A forked widget'
+expect_match "the blurb skips setext headings and callouts" "${ls_out}" \
+  '^setext .*  Setext is described here\.$'
+
+show="$("${pf}" show alpha 2>&1)"
+expect_match "README.md wins over README.ar.md" "${show}" 'readme: +README.md'
+expect_match "langs come from manifests" "${show}" 'langs: +go'
+expect_match "a worktree shares its repo's root" "${show}" 'same root: +org/alpha-wt'
+
+show="$("${pf}" show alpha-wt 2>&1)"
+expect_match "show resolves a unique substring" "${show}" 'name: +org/alpha-wt'
+expect_match "worktrees record their repo" "${show}" 'worktree of: +alpha'
+
+dump="$(sqlite3 "${PF_DB}" .dump)"
+expect_no_match "remote credentials never reach the index" "${dump}" 'SEKRIT|token:'
+show="$("${pf}" show secret 2>&1)"
+expect_match "cleaned remotes keep the host and path" "${show}" 'origin https://example.com/other/secret.git'
+
+out="$("${pf}" find sheep 2>&1)"
+expect_match "find searches READMEs" "${out}" '^alpha '
+out="$("${pf}" find 'pelican-ish:' 2>&1 || true)"
+expect_no_match "find quotes FTS syntax in user words" "${out}" 'syntax error|fts5'
+
+"${pf}" note notes-only "Bird research, not code."
+"${pf}" skip secret
+"${pf}" index 2>/dev/null
+out="$("${pf}" note notes-only)"
+expect_match "notes survive a reindex" "${out}" 'Bird research'
+out="$("${pf}" find bird 2>&1)"
+expect_match "find searches notes" "${out}" '^notes-only '
+out="$("${pf}" ls 2>&1)"
+expect_match "notes replace the blurb in ls" "${out}" 'notes-only .*Bird research'
+
+paths="$("${pf}" paths 2>/dev/null)"
+expect_no_match "skipped projects leave paths" "${paths}" '/secret$'
+expect_no_match "paths leaves out worktrees by default" "${paths}" 'alpha-wt'
+expect_no_match "paths leaves out empty dirs and groups" "${paths}" '/(emptyish|org)$'
+paths="$("${pf}" paths --worktrees 2>/dev/null)"
+expect_match "paths --worktrees includes them" "${paths}" 'alpha-wt'
+"${pf}" skip org
+paths="$("${pf}" paths --worktrees 2>/dev/null)"
+expect_no_match "skipping a group skips its children" "${paths}" '/org/'
+"${pf}" unskip org
+paths="$("${pf}" paths 2>/dev/null)"
+expect_match "unskipping a group restores its children" "${paths}" '/org/child$'
+
+paths="$("${pf}" paths --class fork 2>/dev/null)"
+expect_match "paths --class filters" "${paths}" '/forked$'
+expect_no_match "paths --class leaves out other classes" "${paths}" '/alpha$'
+
+if command -v rg >/dev/null; then
+  out="$("${pf}" grep -l sheep 2>/dev/null)"
+  expect_match "grep searches mine by default" "${out}" 'alpha/README.md'
+fi
+
+mkdir -p "${PF_ROOT}/brand-new"
+err="$("${pf}" ls 2>&1 >/dev/null)"
+expect_match "read commands warn about unindexed entries" "${err}" '1 entries .* not indexed'
+paths="$("${pf}" paths 2>/dev/null)"
+expect_no_match "warnings stay off stdout" "${paths}" 'pf:'
+
+rm -rf "${PF_ROOT}/brand-new"
+git -C "${PF_ROOT}/alpha" worktree remove --force "${PF_ROOT}/org/alpha-wt"
+rm -rf "${PF_ROOT}/notes-only"
+"${pf}" index 2>/dev/null
+out="$("${pf}" ls --gone 2>&1)"
+expect_match "removed directories are marked gone" "${out}" '^notes-only '
+out="$("${pf}" ls 2>&1)"
+expect_no_match "gone projects leave ls" "${out}" '^notes-only '
+out="$("${pf}" note notes-only)"
+expect_match "a gone project keeps its note" "${out}" 'Bird research'
+
+sqlite3 "${PF_DB}" \
+  "UPDATE meta SET value = '2000-01-01T00:00:00Z' WHERE key = 'last_index';"
+err="$("${pf}" paths 2>&1 >/dev/null)"
+expect_match "read commands warn on an old index" "${err}" 'days old'
+
+if (( failed > 0 )); then
+  printf '%d failed\n' "${failed}"
+  exit 1
+fi
+echo "all passed"
