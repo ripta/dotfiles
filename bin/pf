@@ -1,0 +1,1164 @@
+#!/usr/bin/env bash
+#
+# pf: a project finder for the directories under PF_ROOT.
+#
+# pf keeps an index of PF_ROOT in a SQLite file. The index has three layers.
+# Layer 0 is facts from git and the filesystem. Layer 1 is the README blurb
+# and manifest description. Layer 2 is a short summary from a cheap Claude
+# model, which runs only when asked. Manual notes and skip flags live in their
+# own table. Reindexing never touches them.
+#
+# Read commands warn on stderr when the index is older than PF_STALE_DAYS.
+# Their stdout stays clean, so `rg foo $(pf paths --mine)` works.
+
+set -euo pipefail
+
+PF_ROOT="${PF_ROOT:-${HOME}/projects}"
+PF_DB="${PF_DB:-${XDG_STATE_HOME:-${HOME}/.local/state}/pf/index.db}"
+PF_OWNERS="${PF_OWNERS:-ripta}"
+PF_STALE_DAYS="${PF_STALE_DAYS:-30}"
+PF_MODEL="${PF_MODEL:-haiku}"
+
+PF_SELF="${BASH_SOURCE[0]}"
+
+usage() {
+  cat <<'EOF'
+Usage: pf <command> [args]
+
+Index:
+  index [-v]                   Rescan PF_ROOT (layers 0 and 1)
+  summarize [-n N] [-f] [NAME...]
+                               Ask Claude for summaries (layer 2). Without
+                               names, does the N stalest (default 5).
+
+Read:
+  ls [--class C] [--kind K] [--gone] [--skipped]
+                               List projects
+  show NAME                    Show everything known about a project
+  find [--raw] WORDS...        Full-text search over what projects are
+  paths [SCOPE]                Print project paths, one per line
+  grep [SCOPE] RG-ARGS...      Run rg over the paths in SCOPE (default --mine)
+  pick [QUERY]                 Choose a project with fzf and print its path
+  status                       Index age, counts, and unindexed directories
+
+Notes:
+  note NAME [TEXT...|-]        Show, set, or (with -) read a note from stdin
+  note --clear NAME            Remove a note
+  skip NAME / unskip NAME      Hide from or restore to ls, paths, and grep.
+                               On a group, this covers its children too.
+
+SCOPE is one of --mine (mine, fork, local), --all, or --class C[,C...].
+Add --worktrees to include worktrees. Skipped projects are always left out.
+
+Classes: mine, fork, third-party, local (no remote).
+Kinds: repo, worktree, dir, empty, group, file.
+
+Environment:
+  PF_ROOT        Directory to index (default ~/projects)
+  PF_DB          Index file (default ~/.local/state/pf/index.db)
+  PF_OWNERS      Space-separated remote owners that count as yours (ripta)
+  PF_STALE_DAYS  Warn when the index is older than this (30)
+  PF_MODEL       Model for summarize (haiku)
+EOF
+}
+
+die() {
+  printf 'pf: %s\n' "$*" >&2
+  exit 1
+}
+
+warn() {
+  printf 'pf: %s\n' "$*" >&2
+}
+
+# sql_quote prints its argument as a SQL string literal.
+sql_quote() {
+  local s="${1//\'/\'\'}"
+  printf "'%s'" "${s}"
+}
+
+db() {
+  sqlite3 -batch -bail -cmd '.timeout 5000' "${PF_DB}" "$@"
+}
+
+# db_tabs prints rows as tab-separated fields with no header.
+db_tabs() {
+  sqlite3 -batch -bail -tabs -cmd '.timeout 5000' "${PF_DB}" "$@"
+}
+
+ensure_schema() {
+  mkdir -p "${PF_DB%/*}"
+  db <<'SQL'
+CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS projects(
+  name TEXT PRIMARY KEY,
+  path TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  class TEXT NOT NULL,
+  remotes TEXT,
+  origin TEXT,
+  owner TEXT,
+  worktree_of TEXT,
+  head TEXT,
+  branch TEXT,
+  root TEXT,
+  first_commit TEXT,
+  last_change TEXT,
+  files INTEGER,
+  langs TEXT,
+  has_arch INTEGER,
+  readme TEXT,
+  blurb TEXT,
+  descr TEXT,
+  seen_at TEXT,
+  gone_at TEXT
+);
+CREATE TABLE IF NOT EXISTS docs(name TEXT PRIMARY KEY, text TEXT);
+CREATE TABLE IF NOT EXISTS notes(
+  name TEXT PRIMARY KEY,
+  text TEXT,
+  skip INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS summaries(
+  name TEXT PRIMARY KEY,
+  key TEXT,
+  summary TEXT,
+  tags TEXT,
+  model TEXT,
+  updated_at TEXT
+);
+SQL
+}
+
+# require_index stops when there is no index. It warns when the index is
+# stale or when PF_ROOT has top-level entries the index has not seen.
+require_index() {
+  [[ -f "${PF_DB}" ]] || die "no index at ${PF_DB}. Run: pf index"
+
+  local age
+  age="$(db "SELECT CAST(julianday('now') - julianday(value) AS INTEGER)
+             FROM meta WHERE key = 'last_index';")"
+  if [[ -z "${age}" ]]; then
+    die "the index at ${PF_DB} was never completed. Run: pf index"
+  fi
+  if (( age > PF_STALE_DAYS )); then
+    warn "the index is ${age} days old. Run: pf index"
+  fi
+
+  local unseen
+  unseen="$(unindexed_entries | wc -l | tr -d ' ')"
+  if (( unseen > 0 )); then
+    warn "${unseen} entries in ${PF_ROOT} are not indexed yet. Run: pf index"
+  fi
+}
+
+# top_entries prints the names of the top-level entries in PF_ROOT. It skips
+# dotfiles.
+top_entries() {
+  local p
+  for p in "${PF_ROOT}"/*; do
+    [[ -e "${p}" ]] || continue
+    printf '%s\n' "${p##*/}"
+  done
+}
+
+unindexed_entries() {
+  local known
+  known="$(db "SELECT name FROM projects
+               WHERE gone_at IS NULL AND instr(name, '/') = 0;")"
+  top_entries | sort | comm -23 - <(printf '%s\n' "${known}" | sort)
+}
+
+### Layer 0 and 1: scanning
+
+# mtime prints a path's modification time in epoch seconds.
+mtime() {
+  stat -f %m "$1" 2>/dev/null || stat -c %Y "$1"
+}
+
+# kind_of prints an entry's kind. With a second argument of "top", a plain
+# directory that holds repos or worktrees one level down is a group. That is
+# a container like ghostty-org.
+kind_of() {
+  local p="$1" where="${2:-}" c
+  if [[ -f "${p}" ]]; then
+    echo file
+  elif [[ -f "${p}/.git" ]]; then
+    echo worktree
+  elif [[ -d "${p}/.git" ]]; then
+    echo repo
+  elif [[ -z "$(find "${p}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    echo empty
+  else
+    if [[ "${where}" == top ]]; then
+      for c in "${p}"/*/; do
+        if [[ -e "${c}.git" ]]; then
+          echo group
+          return 0
+        fi
+      done
+    fi
+    echo dir
+  fi
+}
+
+# clean_url removes credentials from scheme://user:pass@host URLs. It leaves
+# scp-style git@host:path URLs alone.
+clean_url() {
+  printf '%s\n' "$1" | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://)[^/]*@#\1#'
+}
+
+# owner_of_url prints the first path component of a remote URL. It prints
+# nothing for local paths.
+owner_of_url() {
+  local u="$1" rest
+  case "${u}" in
+    /* | . | ./* | ../* | file://*) return 0 ;;
+    *://*)
+      rest="${u#*://}"
+      rest="${rest#*/}"
+      ;;
+    *:*) rest="${u#*:}" ;;
+    *) return 0 ;;
+  esac
+  rest="${rest#\~}"
+  printf '%s\n' "${rest%%/*}"
+}
+
+# list_remotes prints "name<TAB>clean-url" for each fetch remote.
+list_remotes() {
+  local name url rest
+  { git -C "$1" remote -v 2>/dev/null || true; } | while read -r name url rest; do
+    [[ "${rest}" == "(fetch)" ]] || continue
+    printf '%s\t%s\n' "${name}" "$(clean_url "${url}")"
+  done
+}
+
+langs_of() {
+  local p="$1" out=()
+  [[ -f "${p}/go.mod" ]] && out+=(go)
+  [[ -f "${p}/Cargo.toml" ]] && out+=(rust)
+  [[ -f "${p}/package.json" ]] && out+=(js)
+  [[ -f "${p}/deno.json" ]] && out+=(deno)
+  { [[ -f "${p}/pyproject.toml" ]] || [[ -f "${p}/setup.py" ]] \
+    || [[ -f "${p}/requirements.txt" ]]; } && out+=(python)
+  [[ -f "${p}/Gemfile" ]] && out+=(ruby)
+  [[ -f "${p}/build.zig" ]] && out+=(zig)
+  [[ -d "${p}/cue.mod" ]] && out+=(cue)
+  [[ -f "${p}/flake.nix" ]] && out+=(nix)
+  [[ -f "${p}/mix.exs" ]] && out+=(elixir)
+  [[ -f "${p}/CMakeLists.txt" ]] && out+=(c/c++)
+  [[ -f "${p}/hugo.toml" ]] || [[ -f "${p}/config.toml" && -d "${p}/layouts" ]] \
+    && out+=(hugo)
+  printf '%s\n' "${out[*]:-}"
+}
+
+# pick_readme prints the file name of the best README in a directory. It
+# prefers an exact README.md over translations like README.ar.md.
+pick_readme() {
+  local p="$1" f
+  for f in README.md readme.md Readme.md README.markdown README.rst \
+    README.txt README README.org index.md; do
+    if [[ -f "${p}/${f}" ]]; then
+      printf '%s\n' "${f}"
+      return 0
+    fi
+  done
+  local best="" c
+  shopt -s nocaseglob
+  for c in "${p}"/readme*; do
+    [[ -f "${c}" ]] || continue
+    c="${c##*/}"
+    if [[ -z "${best}" || ${#c} -lt ${#best} ]]; then
+      best="${c}"
+    fi
+  done
+  shopt -u nocaseglob
+  if [[ -n "${best}" ]]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
+  for f in index.html index.js; do
+    if [[ -f "${p}/${f}" ]]; then
+      printf '%s\n' "${f}"
+      return 0
+    fi
+  done
+}
+
+# blurb_of prints the first prose paragraph of a README. It skips headings,
+# badges, HTML, tables, and code fences, then strips simple markdown.
+blurb_of() {
+  local file="$1"
+  case "${file}" in
+    *.html)
+      sed -n '/<[Tt][Ii][Tt][Ll][Ee]>/{s/.*<[Tt][Ii][Tt][Ll][Ee]>\([^<]*\).*/\1/p;q;}' \
+        "${file}"
+      return 0
+      ;;
+    *.js) return 0 ;;
+    *) ;;
+  esac
+  # awk stops early. Feeding it from a pipe would SIGPIPE the writer on a
+  # long README, and pipefail would turn that into a failure.
+  local text
+  text="$(head -c 65536 "${file}" | tr -d '\000\r')"
+  awk '
+    NR == 1 && /^---[[:space:]]*$/ { front = 1; next }
+    front { if (/^---[[:space:]]*$/) front = 0; next }
+    /^[[:space:]]*(```|~~~)/ { fence = !fence; if (started) exit; next }
+    fence { next }
+    /<!--/ { comment = 1 }
+    comment { if (/-->/) comment = 0; next }
+    /^[[:space:]]*$/ { if (started) exit; next }
+    /^[[:space:]]*#/ { if (started) exit; next }
+    # An underline right after one line makes that line a setext heading.
+    /^[[:space:]]*[=~^*+-]+[[:space:]]*$/ {
+      if (lines == 1) { started = 0; lines = 0; out = ""; n = 0 }
+      if (started) exit
+      next
+    }
+    !started && /^[[:space:]]*[<!|>]/ { next }
+    !started && /^[[:space:]]*\[!\[/ { next }
+    !started && /^\.\. / { next }
+    !started && /^:[a-zA-Z]+:/ { next }
+    {
+      started = 1
+      lines++
+      out = out $0 " "
+      n += length($0)
+      if (n > 600) exit
+    }
+    END { print out }
+  ' <<<"${text}" | sed -E \
+    -e 's/<[^>]*>//g' \
+    -e 's/!\[[^]]*\]\([^)]*\)//g' \
+    -e 's/\[([^]]*)\]\([^)]*\)/\1/g' \
+    -e 's/[*`]//g' \
+    -e 's/[[:space:]]+/ /g' \
+    -e 's/^ //; s/ $//' \
+    | cut -c1-400
+}
+
+descr_of() {
+  local p="$1" d=""
+  if [[ -f "${p}/package.json" ]]; then
+    d="$(jq -r '.description // empty' "${p}/package.json" 2>/dev/null || true)"
+  fi
+  if [[ -z "${d}" ]]; then
+    for f in Cargo.toml pyproject.toml; do
+      [[ -f "${p}/${f}" ]] || continue
+      d="$(sed -n '/^description *= *"/{s/^description *= *"\(.*\)"/\1/p;q;}' "${p}/${f}")"
+      [[ -n "${d}" ]] && break
+    done
+  fi
+  if [[ -z "${d}" && -f "${p}/go.mod" ]]; then
+    d="$(awk '$1 == "module" { print "Go module " $2; exit }' "${p}/go.mod")"
+  fi
+  printf '%s\n' "${d}"
+}
+
+# doc_of prints the text that full-text search covers: the start of the
+# README and of ARCHITECTURE.md.
+doc_of() {
+  local p="$1" readme="$2"
+  if [[ -n "${readme}" ]]; then
+    head -c 16384 "${p}/${readme}" | tr -d '\000'
+    echo
+  fi
+  if [[ -f "${p}/ARCHITECTURE.md" ]]; then
+    head -c 8192 "${p}/ARCHITECTURE.md" | tr -d '\000'
+  fi
+}
+
+# scan_one prints one JSON object describing an entry. PREV is the file of
+# earlier "name<TAB>head<TAB>root<TAB>first" rows, so unchanged repos skip
+# the full-history walk for the root commit.
+scan_one() {
+  local name="$1" p="$2" kind="$3" prev="$4"
+  local remotes="" origin="" owner="" class=local worktree_of=""
+  local head="" branch="" root="" first="" changed="" files=0
+  local langs="" readme="" blurb="" descr="" doc="" has_arch=0
+
+  if [[ "${kind}" == repo || "${kind}" == worktree ]]; then
+    remotes="$(list_remotes "${p}")"
+
+    local rname rurl o any=0 mine=0 foreign_up=0
+    while IFS=$'\t' read -r rname rurl; do
+      [[ -n "${rname}" ]] || continue
+      if [[ "${rname}" == origin || -z "${origin}" ]]; then
+        origin="${rurl}"
+      fi
+      o="$(owner_of_url "${rurl}")"
+      [[ -n "${o}" ]] || continue
+      any=1
+      if [[ " ${PF_OWNERS} " == *" ${o} "* ]]; then
+        mine=1
+        owner="${o}"
+      elif [[ "${rname}" == upstream ]]; then
+        foreign_up=1
+      fi
+      [[ -n "${owner}" ]] || owner="${o}"
+    done <<<"${remotes}"
+    if (( mine && foreign_up )); then
+      class=fork
+    elif (( mine )); then
+      class=mine
+    elif (( any )); then
+      class=third-party
+    fi
+    o="$(owner_of_url "${origin}")"
+    [[ -n "${o}" ]] && owner="${o}"
+
+    if [[ "${kind}" == worktree ]]; then
+      local common
+      common="$(git -C "${p}" rev-parse --path-format=absolute \
+        --git-common-dir 2>/dev/null || true)"
+      common="${common%/.git}"
+      worktree_of="${common#"${PF_ROOT}"/}"
+    fi
+
+    head="$(git -C "${p}" rev-parse -q --verify 'HEAD^{commit}' 2>/dev/null || true)"
+    branch="$(git -C "${p}" symbolic-ref -q --short HEAD 2>/dev/null || true)"
+    if [[ -n "${head}" ]]; then
+      changed="$(git -C "${p}" log -1 --format=%ct HEAD)"
+      local row
+      row="$(awk -F'\t' -v n="${name}" -v h="${head}" \
+        '$1 == n && $2 == h { print $3 "\t" $4; exit }' "${prev}")"
+      if [[ -n "${row}" && "${row}" != $'\t' ]]; then
+        root="${row%%$'\t'*}"
+        first="${row#*$'\t'}"
+      else
+        root="$(git -C "${p}" rev-list --max-parents=0 HEAD | tail -n1)"
+        first="$(git -C "${p}" log -1 --format=%cI "${root}")"
+      fi
+    else
+      changed="$(mtime "${p}")"
+    fi
+    files="$({ git -C "${p}" ls-files 2>/dev/null || true; } | wc -l | tr -d ' ')"
+  else
+    changed="$(mtime "${p}")"
+    if [[ -d "${p}" ]]; then
+      files="$(find "${p}" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')"
+    fi
+  fi
+
+  if [[ -d "${p}" ]]; then
+    langs="$(langs_of "${p}")"
+    readme="$(pick_readme "${p}")"
+    if [[ -n "${readme}" ]]; then
+      blurb="$(blurb_of "${p}/${readme}")"
+    fi
+    descr="$(descr_of "${p}")"
+    [[ -f "${p}/ARCHITECTURE.md" ]] && has_arch=1
+    doc="$(doc_of "${p}" "${readme}")"
+  fi
+
+  jq -n -c \
+    --arg name "${name}" --arg path "${p}" --arg kind "${kind}" \
+    --arg class "${class}" --arg remotes "${remotes}" \
+    --arg origin "${origin}" --arg owner "${owner}" \
+    --arg worktree_of "${worktree_of}" --arg head "${head}" \
+    --arg branch "${branch}" --arg root "${root}" --arg first "${first}" \
+    --argjson changed "${changed:-0}" --argjson files "${files:-0}" \
+    --arg langs "${langs}" --argjson has_arch "${has_arch}" \
+    --arg readme "${readme}" --arg blurb "${blurb}" --arg descr "${descr}" \
+    --arg doc "${doc}" '
+    def nz: if . == "" then null else . end;
+    {
+      name: $name, path: $path, kind: $kind, class: $class,
+      remotes: ($remotes | split("\n") | map(select(length > 0)
+        | split("\t") | {name: .[0], url: .[1]})),
+      origin: ($origin | nz), owner: ($owner | nz),
+      worktree_of: ($worktree_of | nz), head: ($head | nz),
+      branch: ($branch | nz), root: ($root | nz),
+      first_commit: ($first | nz),
+      last_change: ($changed | todate),
+      files: $files, langs: ($langs | nz), has_arch: $has_arch,
+      readme: ($readme | nz), blurb: ($blurb | nz), descr: ($descr | nz),
+      doc: $doc
+    }'
+}
+
+# scan_safely runs scan_one in its own process, where set -e still applies.
+# A failure there skips that one entry with a warning. The run goes on.
+scan_safely() {
+  local out
+  if out="$("${PF_SELF}" __scan_one "$@")"; then
+    printf '%s\n' "${out}"
+  else
+    warn "could not scan $1. Skipping it."
+  fi
+}
+
+# scan_all prints one JSON object per line for every entry under PF_ROOT.
+# Containers get a row, and so does each directory inside them. pf never
+# descends further, and never walks plain directories.
+scan_all() {
+  local prev="$1" verbose="$2" p name kind c
+  for p in "${PF_ROOT}"/*; do
+    [[ -e "${p}" ]] || continue
+    name="${p##*/}"
+    kind="$(kind_of "${p}" top)"
+    (( verbose )) && warn "scan ${name} (${kind})"
+    scan_safely "${name}" "${p}" "${kind}" "${prev}"
+
+    [[ "${kind}" == group ]] || continue
+    for c in "${p}"/*/; do
+      c="${c%/}"
+      [[ -d "${c}" ]] || continue
+      (( verbose )) && warn "scan ${name}/${c##*/}"
+      scan_safely "${name}/${c##*/}" "${c}" "$(kind_of "${c}")" "${prev}"
+    done
+  done
+}
+
+rebuild_search() {
+  db <<'SQL'
+BEGIN;
+DROP TABLE IF EXISTS search;
+CREATE VIRTUAL TABLE search USING fts5(
+  name, facts, note, summary, doc, tokenize = 'porter unicode61'
+);
+INSERT INTO search(name, facts, note, summary, doc)
+SELECT p.name,
+       concat_ws(' ', p.kind, p.class, p.owner, p.origin, p.langs,
+                 p.blurb, p.descr),
+       n.text,
+       concat_ws(' ', s.summary, s.tags),
+       d.text
+  FROM projects p
+  LEFT JOIN notes n ON n.name = p.name
+  LEFT JOIN summaries s ON s.name = p.name
+  LEFT JOIN docs d ON d.name = p.name;
+COMMIT;
+SQL
+}
+
+cmd_index() {
+  local verbose=0
+  while (( $# )); do
+    case "$1" in
+      -v | --verbose) verbose=1 ;;
+      *) die "index: unknown argument: $1" ;;
+    esac
+    shift
+  done
+
+  [[ -d "${PF_ROOT}" ]] || die "PF_ROOT is not a directory: ${PF_ROOT}"
+  # git reports physical paths, so the root must be one too. Otherwise a
+  # symlinked root would leave worktree_of as an absolute path.
+  PF_ROOT="$(cd "${PF_ROOT}" && pwd -P)"
+  export PF_ROOT
+  ensure_schema
+
+  local tmp
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/pf.XXXXXX")"
+  # shellcheck disable=SC2064 # expand tmp now, while it is set
+  trap "rm -rf '${tmp}'" EXIT
+
+  db_tabs "SELECT name, head, root, first_commit FROM projects
+           WHERE head IS NOT NULL;" >"${tmp}/prev.tsv"
+
+  local start=${SECONDS}
+  scan_all "${tmp}/prev.tsv" "${verbose}" >"${tmp}/scan.jsonl"
+  jq -s . "${tmp}/scan.jsonl" >"${tmp}/scan.json"
+
+  db <<SQL
+BEGIN;
+CREATE TEMP TABLE scan AS
+  SELECT value AS v FROM json_each(readfile($(sql_quote "${tmp}/scan.json")));
+INSERT INTO projects(name, path, kind, class, remotes, origin, owner,
+                     worktree_of, head, branch, root, first_commit,
+                     last_change, files, langs, has_arch, readme, blurb,
+                     descr, seen_at, gone_at)
+SELECT v->>'name', v->>'path', v->>'kind', v->>'class', v->'remotes',
+       v->>'origin', v->>'owner', v->>'worktree_of', v->>'head',
+       v->>'branch', v->>'root', v->>'first_commit', v->>'last_change',
+       v->>'files', v->>'langs', v->>'has_arch', v->>'readme', v->>'blurb',
+       v->>'descr', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), NULL
+  FROM scan WHERE true
+ON CONFLICT(name) DO UPDATE SET
+  path = excluded.path, kind = excluded.kind, class = excluded.class,
+  remotes = excluded.remotes, origin = excluded.origin,
+  owner = excluded.owner, worktree_of = excluded.worktree_of,
+  head = excluded.head, branch = excluded.branch, root = excluded.root,
+  first_commit = excluded.first_commit, last_change = excluded.last_change,
+  files = excluded.files, langs = excluded.langs,
+  has_arch = excluded.has_arch, readme = excluded.readme,
+  blurb = excluded.blurb, descr = excluded.descr,
+  seen_at = excluded.seen_at, gone_at = NULL;
+UPDATE projects SET gone_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+ WHERE gone_at IS NULL
+   AND name NOT IN (SELECT v->>'name' FROM temp.scan);
+INSERT OR REPLACE INTO docs(name, text)
+  SELECT v->>'name', v->>'doc' FROM scan;
+INSERT OR REPLACE INTO meta(key, value)
+  VALUES ('last_index', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+COMMIT;
+SQL
+  rebuild_search
+
+  local seen gone
+  seen="$(jq -s length "${tmp}/scan.jsonl")"
+  gone="$(db "SELECT count(*) FROM projects WHERE gone_at IS NOT NULL;")"
+  warn "indexed ${seen} entries in $(( SECONDS - start ))s (${gone} gone)"
+}
+
+### Read commands
+
+# resolve_name prints the indexed name that matches NAME. It accepts an exact
+# name, or a substring that matches exactly one name.
+resolve_name() {
+  local want="$1" found
+  found="$(db "SELECT name FROM projects WHERE name = $(sql_quote "${want}");")"
+  if [[ -n "${found}" ]]; then
+    printf '%s\n' "${found}"
+    return 0
+  fi
+  found="$(db "SELECT name FROM projects
+               WHERE instr(lower(name), lower($(sql_quote "${want}"))) > 0
+               ORDER BY gone_at IS NOT NULL, name;")"
+  if [[ -z "${found}" ]]; then
+    die "no project matches: ${want}"
+  fi
+  if [[ "$(printf '%s\n' "${found}" | wc -l | tr -d ' ')" -gt 1 ]]; then
+    warn "several projects match ${want}:"
+    printf '%s\n' "${found}" | sed 's/^/  /' >&2
+    exit 1
+  fi
+  printf '%s\n' "${found}"
+}
+
+# The best one-line description: a note, then a summary, then the blurb.
+DESC_SQL="coalesce(nullif(n.text, ''), nullif(s.summary, ''),
+                   nullif(p.blurb, ''), nullif(p.descr, ''), '')"
+
+cmd_ls() {
+  local where=("p.gone_at IS NULL" "coalesce(n.skip, 0) = 0")
+  local c
+  while (( $# )); do
+    case "$1" in
+      --class)
+        [[ $# -ge 2 ]] || die "ls: --class needs a value"
+        where+=("p.class IN ($(class_list "$2"))")
+        shift
+        ;;
+      --kind)
+        [[ $# -ge 2 ]] || die "ls: --kind needs a value"
+        where+=("p.kind IN ($(class_list "$2"))")
+        shift
+        ;;
+      --gone) where[0]="p.gone_at IS NOT NULL" ;;
+      --skipped) where[1]="n.skip = 1" ;;
+      *) die "ls: unknown argument: $1" ;;
+    esac
+    shift
+  done
+  require_index
+
+  local cond
+  cond="$(printf ' AND %s' "${where[@]}")"
+  c="$(db_tabs "SELECT p.name, p.kind, p.class, substr(p.last_change, 1, 10),
+                       replace(substr(${DESC_SQL}, 1, 90), char(9), ' ')
+                  FROM projects p
+                  LEFT JOIN notes n ON n.name = p.name
+                  LEFT JOIN summaries s ON s.name = p.name
+                 WHERE 1 ${cond}
+                 ORDER BY p.name COLLATE NOCASE;")"
+  [[ -n "${c}" ]] || return 0
+  printf '%s\n' "${c}" | column -t -s $'\t'
+}
+
+# class_list turns "a,b" into "'a','b'" for an IN clause.
+class_list() {
+  local IFS=, item out=()
+  for item in $1; do
+    out+=("$(sql_quote "${item}")")
+  done
+  printf '%s' "${out[*]}"
+}
+
+cmd_show() {
+  [[ $# -eq 1 ]] || die "usage: pf show NAME"
+  require_index
+  local name q
+  name="$(resolve_name "$1")"
+  q="$(sql_quote "${name}")"
+
+  db_tabs "SELECT 'name', name FROM projects WHERE name = ${q}
+     UNION ALL SELECT 'path', path FROM projects WHERE name = ${q}
+     UNION ALL SELECT 'kind', kind FROM projects WHERE name = ${q}
+     UNION ALL SELECT 'class', class FROM projects WHERE name = ${q}
+     UNION ALL SELECT 'worktree of', worktree_of FROM projects
+                WHERE name = ${q} AND worktree_of IS NOT NULL
+     UNION ALL SELECT 'remote', r.value->>'name' || ' ' || (r.value->>'url')
+                FROM projects, json_each(projects.remotes) r WHERE name = ${q}
+     UNION ALL SELECT 'branch', coalesce(branch, '(detached)') FROM projects
+                WHERE name = ${q} AND head IS NOT NULL
+     UNION ALL SELECT 'head', substr(head, 1, 12) FROM projects
+                WHERE name = ${q} AND head IS NOT NULL
+     UNION ALL SELECT 'first commit', substr(first_commit, 1, 10) FROM projects
+                WHERE name = ${q} AND first_commit IS NOT NULL
+     UNION ALL SELECT 'last change', substr(last_change, 1, 10) FROM projects
+                WHERE name = ${q}
+     UNION ALL SELECT 'files', files FROM projects WHERE name = ${q}
+     UNION ALL SELECT 'langs', langs FROM projects
+                WHERE name = ${q} AND langs IS NOT NULL
+     UNION ALL SELECT 'readme', readme FROM projects
+                WHERE name = ${q} AND readme IS NOT NULL
+     UNION ALL SELECT 'architecture', 'ARCHITECTURE.md' FROM projects
+                WHERE name = ${q} AND has_arch = 1
+     UNION ALL SELECT 'same root', group_concat(o.name, ', ')
+                FROM projects p JOIN projects o
+                  ON o.root = p.root AND o.name <> p.name
+               WHERE p.name = ${q} AND p.root IS NOT NULL
+                 AND o.gone_at IS NULL
+              HAVING count(*) > 0
+     UNION ALL SELECT 'skipped', 'yes' FROM notes
+                WHERE name = ${q} AND skip = 1
+     UNION ALL SELECT 'gone since', substr(gone_at, 1, 10) FROM projects
+                WHERE name = ${q} AND gone_at IS NOT NULL;" \
+    | awk -F'\t' '{ printf "%-13s %s\n", $1 ":", $2 }'
+
+  local text
+  for text in \
+    "note|SELECT text FROM notes WHERE name = ${q} AND text <> ''" \
+    "summary|SELECT summary || char(10) || 'tags: ' || tags FROM summaries WHERE name = ${q}" \
+    "blurb|SELECT blurb FROM projects WHERE name = ${q}" \
+    "description|SELECT descr FROM projects WHERE name = ${q}"; do
+    local label="${text%%|*}" body
+    body="$(db "${text#*|};")"
+    [[ -n "${body}" ]] || continue
+    printf '\n%s:\n%s\n' "${label}" "${body}" | fold -s -w 78
+  done
+}
+
+# fts_query quotes each word so FTS5 treats it as a plain term.
+fts_query() {
+  local w out=()
+  for w in "$@"; do
+    out+=("\"${w//\"/\"\"}\"")
+  done
+  printf '%s' "${out[*]}"
+}
+
+cmd_find() {
+  local raw=0 limit=20 words=()
+  while (( $# )); do
+    case "$1" in
+      --raw) raw=1 ;;
+      -n)
+        [[ $# -ge 2 ]] || die "find: -n needs a value"
+        limit="$2"
+        shift
+        ;;
+      --)
+        shift
+        words+=("$@")
+        break
+        ;;
+      -*) die "find: unknown argument: $1" ;;
+      *) words+=("$1") ;;
+    esac
+    shift
+  done
+  [[ ${#words[@]} -gt 0 ]] || die "usage: pf find [--raw] [-n N] WORDS..."
+  set -- "${words[@]}"
+  [[ "${limit}" =~ ^[0-9]+$ ]] || die "find: -n needs a number"
+  require_index
+
+  local q
+  if (( raw )); then
+    q="$*"
+  else
+    q="$(fts_query "$@")"
+  fi
+
+  db_tabs "SELECT search.name, p.class, ${DESC_SQL},
+                  replace(snippet(search, -1, '»', '«', '…', 10),
+                          char(10), ' '),
+                  p.gone_at IS NOT NULL
+             FROM search
+             JOIN projects p ON p.name = search.name
+             LEFT JOIN notes n ON n.name = p.name
+             LEFT JOIN summaries s ON s.name = p.name
+            WHERE search MATCH $(sql_quote "${q}")
+            ORDER BY bm25(search, 10.0, 3.0, 8.0, 5.0, 1.0)
+            LIMIT ${limit};" \
+    | awk -F'\t' '{
+        printf "%s  [%s%s]  %s\n", $1, $2, ($5 ? ", gone" : ""), substr($3, 1, 90)
+        if ($4 != "") printf "    %s\n", $4
+      }'
+}
+
+# scope_where turns scope flags into a SQL condition. It prints the condition
+# on the first line and the remaining arguments after it, NUL-separated.
+SCOPE_COND=""
+SCOPE_REST=()
+parse_scope() {
+  local default="$1"
+  shift
+  local classes="" worktrees=0
+  SCOPE_REST=()
+  while (( $# )); do
+    case "$1" in
+      --mine) classes="mine,fork,local" ;;
+      --all) classes="*" ;;
+      --class)
+        [[ $# -ge 2 ]] || die "--class needs a value"
+        classes="$2"
+        shift
+        ;;
+      --worktrees) worktrees=1 ;;
+      *)
+        SCOPE_REST=("$@")
+        break
+        ;;
+    esac
+    shift
+  done
+  [[ -n "${classes}" ]] || classes="${default}"
+
+  SCOPE_COND="p.gone_at IS NULL AND coalesce(n.skip, 0) = 0
+              AND p.kind NOT IN ('empty', 'group')"
+  if (( ! worktrees )); then
+    SCOPE_COND+=" AND p.kind <> 'worktree'"
+  fi
+  if [[ "${classes}" != "*" ]]; then
+    SCOPE_COND+=" AND p.class IN ($(class_list "${classes}"))"
+  fi
+}
+
+scope_paths() {
+  db "SELECT p.path FROM projects p
+        LEFT JOIN notes n ON n.name = p.name
+       WHERE ${SCOPE_COND}
+       ORDER BY p.name COLLATE NOCASE;"
+}
+
+cmd_paths() {
+  parse_scope "*" "$@"
+  [[ ${#SCOPE_REST[@]} -eq 0 ]] || die "paths: unknown argument: ${SCOPE_REST[0]}"
+  require_index
+  scope_paths
+}
+
+cmd_grep() {
+  parse_scope "mine,fork,local" "$@"
+  [[ ${#SCOPE_REST[@]} -gt 0 ]] || die "usage: pf grep [SCOPE] RG-ARGS... PATTERN"
+  require_index
+
+  local paths=() line
+  while IFS= read -r line; do
+    [[ -e "${line}" ]] && paths+=("${line}")
+  done < <(scope_paths)
+  [[ ${#paths[@]} -gt 0 ]] || die "grep: no projects in scope"
+  exec rg "${SCOPE_REST[@]}" "${paths[@]}"
+}
+
+cmd_pick() {
+  command -v fzf >/dev/null || die "pick needs fzf"
+  require_index
+  local rows choice
+  rows="$(db_tabs "SELECT p.name, p.class,
+                            replace(substr(${DESC_SQL}, 1, 120), char(9), ' ')
+                       FROM projects p
+                       LEFT JOIN notes n ON n.name = p.name
+                       LEFT JOIN summaries s ON s.name = p.name
+                      WHERE p.gone_at IS NULL AND p.kind <> 'file'
+                      ORDER BY p.last_change DESC;")"
+
+  # fzf prints tabs raw, so the terminal snaps them to 8-column stops and
+  # the columns drift. Pad with spaces instead. The name stays in a hidden
+  # first field for the preview and the result.
+  choice="$(printf '%s\n' "${rows}" \
+    | awk -F'\t' '
+        { name[NR] = $1; class[NR] = $2; desc[NR] = $3
+          if (length($1) > wn) wn = length($1)
+          if (length($2) > wc) wc = length($2) }
+        END {
+          for (i = 1; i <= NR; i++)
+            printf "%s\t%-*s  %-*s  %s\n", name[i], wn, name[i], wc, class[i], desc[i]
+        }' \
+    | fzf --delimiter $'\t' --with-nth 2 --query "${*:-}" --select-1 \
+        --preview "$(printf '%q' "${PF_SELF}") show {1}" \
+        --preview-window 'right,55%,wrap')" || exit 1
+  db "SELECT path FROM projects WHERE name = $(sql_quote "${choice%%$'\t'*}");"
+}
+
+cmd_status() {
+  require_index
+  db_tabs "SELECT 'index', $(sql_quote "${PF_DB}")
+     UNION ALL SELECT 'root', $(sql_quote "${PF_ROOT}")
+     UNION ALL SELECT 'last index', value || ' ('
+                || CAST(julianday('now') - julianday(value) AS INTEGER)
+                || ' days ago)' FROM meta WHERE key = 'last_index'
+     UNION ALL SELECT 'kinds', group_concat(kind || '=' || c, ' ')
+                FROM (SELECT kind, count(*) c FROM projects
+                       WHERE gone_at IS NULL GROUP BY kind)
+     UNION ALL SELECT 'classes', group_concat(class || '=' || c, ' ')
+                FROM (SELECT class, count(*) c FROM projects
+                       WHERE gone_at IS NULL AND kind IN ('repo', 'worktree')
+                       GROUP BY class)
+     UNION ALL SELECT 'gone', count(*) FROM projects WHERE gone_at IS NOT NULL
+     UNION ALL SELECT 'notes', count(*) FROM notes WHERE text <> ''
+     UNION ALL SELECT 'skipped', count(*) FROM notes WHERE skip = 1
+     UNION ALL SELECT 'summaries', count(*) || ' ('
+                || coalesce(sum(s.key IS NOT ${SUMMARY_KEY_SQL}), 0)
+                || ' stale)'
+                FROM summaries s JOIN projects p ON p.name = s.name;" \
+    | awk -F'\t' '{ printf "%-11s %s\n", $1 ":", $2 }'
+
+  local unseen
+  unseen="$(unindexed_entries)"
+  if [[ -n "${unseen}" ]]; then
+    printf 'unindexed:  %s\n' "$(printf '%s\n' "${unseen}" | paste -sd ' ' -)"
+  fi
+}
+
+### Notes and skips
+
+ensure_known() {
+  local name="$1" found
+  found="$(db "SELECT name FROM projects WHERE name = $(sql_quote "${name}");")"
+  [[ -n "${found}" ]] || die "not indexed: ${name}. Run: pf index"
+}
+
+cmd_note() {
+  [[ -f "${PF_DB}" ]] || die "no index at ${PF_DB}. Run: pf index"
+  if [[ "${1:-}" == --clear ]]; then
+    [[ $# -eq 2 ]] || die "usage: pf note --clear NAME"
+    db "UPDATE notes SET text = NULL WHERE name = $(sql_quote "$2");"
+    rebuild_search
+    return 0
+  fi
+  [[ $# -ge 1 ]] || die "usage: pf note NAME [TEXT...|-]"
+
+  local name="$1"
+  shift
+  if [[ $# -eq 0 ]]; then
+    name="$(resolve_name "${name}")"
+    db "SELECT text FROM notes WHERE name = $(sql_quote "${name}");"
+    return 0
+  fi
+
+  ensure_known "${name}"
+  local text
+  if [[ "$*" == - ]]; then
+    text="$(cat)"
+  else
+    text="$*"
+  fi
+  db "INSERT INTO notes(name, text, updated_at)
+      VALUES ($(sql_quote "${name}"), $(sql_quote "${text}"),
+              strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      ON CONFLICT(name) DO UPDATE SET
+        text = excluded.text, updated_at = excluded.updated_at;"
+  rebuild_search
+}
+
+set_skip() {
+  local value="$1" name="$2"
+  [[ -f "${PF_DB}" ]] || die "no index at ${PF_DB}. Run: pf index"
+  ensure_known "${name}"
+  local q
+  q="$(sql_quote "${name}")"
+  # Skipping a group skips the projects inside it too.
+  db "INSERT INTO notes(name, skip, updated_at)
+      SELECT name, ${value}, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        FROM projects
+       WHERE name = ${q} OR substr(name, 1, length(${q}) + 1) = ${q} || '/'
+      ON CONFLICT(name) DO UPDATE SET
+        skip = excluded.skip, updated_at = excluded.updated_at;"
+}
+
+### Layer 2: summaries
+
+# A summary is current while this key matches. Repos key on HEAD. Everything
+# else keys on the last change time.
+SUMMARY_KEY_SQL="coalesce(p.head, 'mtime:' || p.last_change)"
+
+SUMMARY_SCHEMA='{
+  "type": "object",
+  "properties": {
+    "summary": {"type": "string"},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["summary", "tags"]
+}'
+
+summary_prompt() {
+  local name="$1" q path kind
+  q="$(sql_quote "${name}")"
+  path="$(db "SELECT path FROM projects WHERE name = ${q};")"
+  kind="$(db "SELECT kind FROM projects WHERE name = ${q};")"
+
+  cat <<'EOF'
+You are cataloguing one directory in a person's ~/projects folder. They will
+read your summary months later to remember what the directory is.
+
+Write a summary of one or two short sentences. Say what the project is and
+what it does. Say whose it is when the facts show it (their own, a fork, or
+a third-party clone). If it looks like a placeholder, a scratch space, a
+backup copy, or a cache, say that plainly. Do not invent details the material
+below does not support.
+
+Also give three to six short lowercase tags, such as the language, the domain,
+and the kind of thing (cli, library, website, notes, game, fork).
+
+EOF
+  echo "## Facts"
+  db_tabs "SELECT name, kind, class, coalesce(origin, ''),
+                  coalesce(worktree_of, ''), coalesce(langs, ''),
+                  last_change, files, coalesce(descr, '')
+             FROM projects WHERE name = ${q};" \
+    | awk -F'\t' '
+        BEGIN {
+          n = split("name|kind|class|origin|worktree of|languages|" \
+                    "last change|tracked files|manifest description", label, "|")
+        }
+        { for (i = 1; i <= n; i++) if ($i != "") printf "%s: %s\n", label[i], $i }'
+  echo
+  echo "## README and ARCHITECTURE.md (truncated)"
+  db "SELECT substr(text, 1, 6000) FROM docs WHERE name = ${q};"
+  echo
+  echo "## Files"
+  if [[ "${kind}" == repo || "${kind}" == worktree ]]; then
+    git -C "${path}" ls-files 2>/dev/null | head -n 150 || true
+  elif [[ -d "${path}" ]]; then
+    find "${path}" -mindepth 1 -maxdepth 1 | sed 's#.*/##' | sort | head -n 150 || true
+  else
+    printf '%s\n' "${path##*/}"
+  fi
+}
+
+cmd_summarize() {
+  local limit=5 force=0
+  while (( $# )); do
+    case "$1" in
+      -n)
+        [[ $# -ge 2 ]] || die "summarize: -n needs a value"
+        limit="$2"
+        shift
+        ;;
+      -f | --force) force=1 ;;
+      --) shift; break ;;
+      -*) die "summarize: unknown argument: $1" ;;
+      *) break ;;
+    esac
+    shift
+  done
+  [[ "${limit}" =~ ^[0-9]+$ ]] || die "summarize: -n needs a number"
+  command -v claude >/dev/null || die "summarize needs the claude CLI"
+  require_index
+
+  local names=() n
+  if [[ $# -gt 0 ]]; then
+    for n in "$@"; do
+      names+=("$(resolve_name "${n}")")
+    done
+  else
+    local stale="s.key IS NOT ${SUMMARY_KEY_SQL}"
+    (( force )) && stale="1"
+    while IFS= read -r n; do
+      names+=("${n}")
+    done < <(db "SELECT p.name FROM projects p
+                   LEFT JOIN summaries s ON s.name = p.name
+                   LEFT JOIN notes n ON n.name = p.name
+                  WHERE p.gone_at IS NULL AND coalesce(n.skip, 0) = 0
+                    AND p.kind NOT IN ('empty', 'group', 'worktree')
+                    AND ${stale}
+                  ORDER BY CASE p.class WHEN 'mine' THEN 0 WHEN 'local' THEN 1
+                                        WHEN 'fork' THEN 2 ELSE 3 END,
+                           p.name
+                  LIMIT ${limit};")
+  fi
+  if [[ ${#names[@]} -eq 0 ]]; then
+    warn "every summary is current"
+    return 0
+  fi
+
+  local tmp
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/pf.XXXXXX")"
+  # shellcheck disable=SC2064 # expand tmp now, while it is set
+  trap "rm -rf '${tmp}'" EXIT
+
+  local q out summary tags cost total=0
+  for n in "${names[@]}"; do
+    q="$(sql_quote "${n}")"
+    summary_prompt "${n}" >"${tmp}/prompt"
+
+    # Run from an empty directory with no tools, so the model sees only the
+    # prompt. --bare would skip the login, so it is not used.
+    if ! (cd "${tmp}" && claude -p --model "${PF_MODEL}" --tools "" \
+      --strict-mcp-config --disable-slash-commands --no-session-persistence \
+      --max-budget-usd 0.05 --output-format json \
+      --json-schema "${SUMMARY_SCHEMA}" <"${tmp}/prompt" >"${tmp}/out" 2>"${tmp}/err"); then
+      warn "summarize ${n}: claude failed: $(head -c 300 "${tmp}/err")"
+      continue
+    fi
+
+    out="$(jq -c 'if type == "array" then .[-1] else . end' "${tmp}/out")"
+    if [[ "$(jq -r '.is_error' <<<"${out}")" != false ]]; then
+      warn "summarize ${n}: $(jq -r '.result // "no result"' <<<"${out}" | head -c 300 || true)"
+      continue
+    fi
+    summary="$(jq -r '.structured_output.summary // empty' <<<"${out}")"
+    tags="$(jq -r '.structured_output.tags // [] | join(", ")' <<<"${out}")"
+    cost="$(jq -r '.total_cost_usd // 0' <<<"${out}")"
+    total="$(awk -v a="${total}" -v b="${cost}" 'BEGIN { printf "%.4f", a + b }')"
+    if [[ -z "${summary}" ]]; then
+      warn "summarize ${n}: no structured output"
+      continue
+    fi
+
+    db "INSERT OR REPLACE INTO summaries(name, key, summary, tags, model, updated_at)
+        SELECT p.name, ${SUMMARY_KEY_SQL}, $(sql_quote "${summary}"),
+               $(sql_quote "${tags}"), $(sql_quote "${PF_MODEL}"),
+               strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          FROM projects p WHERE p.name = ${q};"
+    printf '%s: %s\n' "${n}" "${summary}"
+  done
+  rebuild_search
+
+  local left
+  left="$(db "SELECT count(*) FROM projects p
+                LEFT JOIN summaries s ON s.name = p.name
+                LEFT JOIN notes n ON n.name = p.name
+               WHERE p.gone_at IS NULL AND coalesce(n.skip, 0) = 0
+                 AND p.kind NOT IN ('empty', 'group', 'worktree')
+                 AND s.key IS NOT ${SUMMARY_KEY_SQL};")"
+  warn "cost \$${total}. ${left} projects still have no current summary."
+}
+
+main() {
+  local cmd="${1:-help}"
+  [[ $# -gt 0 ]] && shift
+  case "${cmd}" in
+    index) cmd_index "$@" ;;
+    __scan_one) scan_one "$@" ;;
+    summarize) cmd_summarize "$@" ;;
+    ls) cmd_ls "$@" ;;
+    show) cmd_show "$@" ;;
+    find) cmd_find "$@" ;;
+    paths) cmd_paths "$@" ;;
+    grep) cmd_grep "$@" ;;
+    pick) cmd_pick "$@" ;;
+    status) cmd_status "$@" ;;
+    note) cmd_note "$@" ;;
+    skip)
+      [[ $# -eq 1 ]] || die "usage: pf skip NAME"
+      set_skip 1 "$1"
+      ;;
+    unskip)
+      [[ $# -eq 1 ]] || die "usage: pf unskip NAME"
+      set_skip 0 "$1"
+      ;;
+    help | -h | --help) usage ;;
+    *) die "unknown command: ${cmd}. Run: pf help" ;;
+  esac
+}
+
+main "$@"
