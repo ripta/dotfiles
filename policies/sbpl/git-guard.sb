@@ -1,0 +1,23 @@
+;; git-guard.sb - Deny writes to git files that run code outside the sandbox.
+;; A hook in .git/hooks, or core.fsmonitor in .git/config, runs on the
+;; next unsandboxed git command.
+;;
+;; Import this LAST in every profile. Seatbelt applies the last matching
+;; rule. A later allow (e.g. go.sb's ~/go) could otherwise re-open these
+;; paths when the project lives under it.
+
+(version 1)
+(deny default)
+
+(define (project-path rel) (string-append (param "PROJECT_PATH") rel))
+
+(deny file-write*
+      ;; Hooks and config, for the repo and for submodules.
+      (subpath (project-path "/.git/hooks"))
+      (literal (project-path "/.git/config"))
+      (regex (string-append "^" (regex-quote (param "PROJECT_PATH"))
+                            "/\\.git/modules/.+/(hooks(/|$)|config$)"))
+      ;; Block renaming .git or the project root away and back. Otherwise
+      ;; hooks could be written under the new name, outside the denied paths.
+      (literal (project-path "/.git"))
+      (literal (param "PROJECT_PATH")))

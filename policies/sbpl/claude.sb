@@ -44,3 +44,6 @@
        (global-name "com.apple.securityd.xpc")
        (global-name "com.apple.security.agent")
        (global-name "com.apple.securityd"))
+
+;; Must stay last. See git-guard.sb.
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))

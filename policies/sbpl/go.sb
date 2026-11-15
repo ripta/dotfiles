@@ -25,3 +25,6 @@
        file-write*
        (home-subpath "/go")
        (home-subpath "/Library/Caches/go-build"))
+
+;; Must stay last. See git-guard.sb.
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))

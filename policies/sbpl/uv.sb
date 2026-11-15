@@ -7,3 +7,6 @@
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/common.sb"))
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/homebrew.sb"))
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/python-common.sb"))
+
+;; Must stay last. See git-guard.sb.
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))
