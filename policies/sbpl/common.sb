@@ -88,6 +88,8 @@
 (allow network-inbound (local ip))
 (allow network-outbound (remote udp "*:53") (remote tcp "*:53"))
 
-;; Process control
+;; Process control.
+;; lsopen is deliberately not allowed. Launch Services starts the target
+;; app through launchd, outside this sandbox. `open x.command` would then
+;; run with no limits.
 (allow process-fork)
-(allow lsopen)
