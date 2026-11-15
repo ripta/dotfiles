@@ -229,6 +229,21 @@ else
 fi
 
 
+### flag tables missing
+#
+# Claude Code's Bash tool replays a snapshot of the shell that keeps
+# functions but drops global variables. The parser must rebuild its tables.
+
+unset __KUBE_GLOBAL_FLAGS __KUBE_GET_FLAGS __KUBE_FLAG_ARITY __KUBE_FLAG_SHORT
+kc_run -n ems logs pod-1 --previous --tail=50
+assert_eq "tables unset: kubectl exits 0" 0 $RC
+assert_eq "tables unset: no error" "" "$ERR"
+assert_ran "tables unset: passes args through" -n ems logs pod-1 --previous --tail=50
+
+unset __KUBE_GLOBAL_FLAGS __KUBE_GET_FLAGS __KUBE_FLAG_ARITY __KUBE_FLAG_SHORT
+assert_parsed "tables unset: parser rebuilds them" --namespace=foo --output=name ::: -nfoo -oname
+
+
 ### flag lists match the installed kubectl
 #
 # kubectl's shell completion (the hidden "__complete" command) lists each
