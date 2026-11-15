@@ -46,10 +46,12 @@
        (subpath "/bin")
        (subpath "/usr"))
 
-;; Temporary files and null devices
+;; Temporary files and null devices.
+;; Seatbelt matches resolved paths. /tmp is a symlink to /private/tmp,
+;; so only the /private spelling ever matches.
 (allow file-read*
        file-write*
-       (subpath "/tmp")
+       (subpath "/private/tmp")
        (regex "^/private/var/folders/.*/T/")
        (literal "/dev/null")
        (literal "/dev/zero"))

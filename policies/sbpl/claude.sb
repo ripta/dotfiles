@@ -33,8 +33,7 @@
        file-write*
        (home-subpath "/.claude")
        (home-literal "/.claude.json")
-       (home-prefix "/.claude.json.")
-       (subpath "/private/tmp"))
+       (home-prefix "/.claude.json."))
 
 ;; Mach services for diagnostics, filesystem events, and security/keychain access
 (allow mach-lookup
