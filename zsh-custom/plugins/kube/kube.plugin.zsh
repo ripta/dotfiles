@@ -1,7 +1,26 @@
-typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
-typeset -g __KUBE_TEMPLATE_DIR=${${(%):-%x}:A:h}/templates
+# Prints the plugin's directory. The path is only known while this file is
+# being sourced, so it is written into the function body here. Some shells
+# copy functions but not global variables, such as the shell snapshot that
+# Claude Code's Bash tool replays. The function still works there.
+eval "function __kube_plugin_dir { print -r -- ${(q)${${(%):-%x}:A:h}} }"
+
+# Sets the plugin's global settings that are missing. Sourcing the plugin
+# calls it once. The functions that read the settings call it again, in case
+# the shell dropped them. A KUBE_CONFIG_DIRS that is already set is kept.
+function __kube_init_settings {
+  if (( ! ${+KUBE_CONFIG_DIRS} ))
+  then
+    typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+  fi
+  if [[ -z $__KUBE_TEMPLATE_DIR ]]
+  then
+    typeset -g __KUBE_TEMPLATE_DIR=$(__kube_plugin_dir)/templates
+  fi
+}
+__kube_init_settings
 
 function kt {
+  __kube_init_settings
   local file=$1
   local dir cand
   if [[ -z "$file" ]]
@@ -45,30 +64,40 @@ function kt {
 }
 
 
-# kubectl's flags, so arguments can be read the way kubectl reads them. A
-# trailing "=" marks a flag that takes a value; the rest are booleans. "/x"
-# gives the one-letter form. Unlisted flags are read as booleans, so a new
-# kubectl flag that takes a value must be added here; test/kube.test.zsh
-# compares these lists against the installed kubectl.
-typeset -ga __KUBE_GLOBAL_FLAGS=(
-  as= as-group= as-uid= cache-dir= certificate-authority= client-certificate=
-  client-key= cluster= context= disable-compression help/h
-  insecure-skip-tls-verify kubeconfig= log-flush-frequency= match-server-version
-  namespace=/n password= profile= profile-output= request-timeout= server=/s
-  tls-server-name= token= user= username= v=/v vmodule= warnings-as-errors
-)
-typeset -ga __KUBE_GET_FLAGS=(
-  all-namespaces/A allow-missing-template-keys chunk-size= field-selector=
-  filename=/f ignore-not-found kustomize=/k label-columns=/L no-headers
-  output=/o output-watch-events raw= recursive/R selector=/l server-print
-  show-kind show-labels show-managed-fields sort-by= subresource= template=
-  watch/w watch-only
-)
+# Builds the flag tables that __kube_parse_args reads. The tables live in a
+# function because some shells copy functions but not global variables. One
+# example is the shell snapshot that Claude Code's Bash tool replays. There,
+# __kube_parse_args calls this function to rebuild the tables.
+function __kube_init_flags {
+  # kubectl's flags, so arguments can be read the way kubectl reads them. A
+  # trailing "=" marks a flag that takes a value; the rest are booleans. "/x"
+  # gives the one-letter form. Unlisted flags are read as booleans, so a new
+  # kubectl flag that takes a value must be added here; test/kube.test.zsh
+  # compares these lists against the installed kubectl.
+  typeset -ga __KUBE_GLOBAL_FLAGS=(
+    as= as-group= as-uid= as-user-extra= cache-dir= certificate-authority=
+    client-certificate= client-key= cluster= context= disable-compression help/h
+    insecure-skip-tls-verify kubeconfig= kuberc= log-flush-frequency=
+    match-server-version
+    namespace=/n password= profile= profile-output= request-timeout= server=/s
+    tls-server-name= token= user= username= v=/v vmodule= warnings-as-errors
+  )
+  typeset -ga __KUBE_GET_FLAGS=(
+    all-namespaces/A allow-missing-template-keys chunk-size= field-selector=
+    filename=/f ignore-not-found kustomize=/k label-columns=/L no-headers
+    output=/o output-watch-events raw= recursive/R selector=/l server-print
+    show-kind show-labels show-managed-fields sort-by= subresource= template=
+    watch/w watch-only
+  )
 
-# Keyed by "scope:name": 1 if the flag takes a value, 0 if it is a boolean.
-typeset -gA __KUBE_FLAG_ARITY
-# Keyed by "scope:letter": the long name.
-typeset -gA __KUBE_FLAG_SHORT
+  # Keyed by "scope:name": 1 if the flag takes a value, 0 if it is a boolean.
+  typeset -gA __KUBE_FLAG_ARITY=()
+  # Keyed by "scope:letter": the long name.
+  typeset -gA __KUBE_FLAG_SHORT=()
+
+  __kube_index_flags global "${__KUBE_GLOBAL_FLAGS[@]}"
+  __kube_index_flags get "${__KUBE_GET_FLAGS[@]}"
+}
 
 function __kube_index_flags {
   local scope=$1 spec name
@@ -88,8 +117,7 @@ function __kube_index_flags {
     fi
   done
 }
-__kube_index_flags global "${__KUBE_GLOBAL_FLAGS[@]}"
-__kube_index_flags get "${__KUBE_GET_FLAGS[@]}"
+__kube_init_flags
 
 
 # Reads kubectl arguments the way kubectl's flag parser (spf13/pflag) does,
@@ -103,6 +131,13 @@ __kube_index_flags get "${__KUBE_GET_FLAGS[@]}"
 #   __kube_pos      indices in __kube_args of the positional arguments
 #   __kube_pos_arg  the same positionals' indices in the original arguments
 function __kube_parse_args {
+  # Without the tables, a lookup like ${__KUBE_FLAG_SHORT[global:n]} is read
+  # as arithmetic and fails with "bad math expression".
+  if [[ ${(t)__KUBE_FLAG_ARITY} != association* || ${(t)__KUBE_FLAG_SHORT} != association* ]]
+  then
+    __kube_init_flags
+  fi
+
   local -a scopes
   scopes=( ${(s:,:)1} )
   shift
@@ -262,6 +297,7 @@ function prompt_kube_plugin() {
 function __kubectl_get {
   # Without pipe_fail, a kubectl error piped into jq reports jq's success.
   setopt local_options pipe_fail
+  __kube_init_settings
 
   local -a __kube_args __kube_pos __kube_pos_arg
   __kube_parse_args global,get "$@"
@@ -380,6 +416,7 @@ function __kubectl_get {
 
 
 function _kt {
+  __kube_init_settings
   local -a configs
   local dir
   for dir in "${KUBE_CONFIG_DIRS[@]}"

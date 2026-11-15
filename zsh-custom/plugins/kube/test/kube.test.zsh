@@ -133,6 +133,7 @@ assert_parsed "short boolean with = value"   --watch=false ::: -w=false
 assert_parsed "long boolean with = value"    --watch=false ::: --watch=false
 assert_parsed "global flag"                  --namespace=foo ::: -nfoo
 assert_parsed "global flag, long"            --context=prod ::: --context prod
+assert_parsed "kuberc takes a value"         --kuberc=prefs get pods ::: --kuberc prefs get pods
 assert_parsed "verbosity"                    --v=6 ::: -v 6
 
 assert_parsed "boolean does not take the next word" --show-kind name ::: --show-kind name
@@ -227,6 +228,56 @@ if (( $+commands[jq] )); then
 else
   print -u2 "skip: jq not installed"
 fi
+
+
+### flag tables missing
+#
+# Claude Code's Bash tool replays a snapshot of the shell that keeps
+# functions but drops global variables. The parser must rebuild its tables.
+
+unset __KUBE_GLOBAL_FLAGS __KUBE_GET_FLAGS __KUBE_FLAG_ARITY __KUBE_FLAG_SHORT
+kc_run -n ems logs pod-1 --previous --tail=50
+assert_eq "tables unset: kubectl exits 0" 0 $RC
+assert_eq "tables unset: no error" "" "$ERR"
+assert_ran "tables unset: passes args through" -n ems logs pod-1 --previous --tail=50
+
+unset __KUBE_GLOBAL_FLAGS __KUBE_GET_FLAGS __KUBE_FLAG_ARITY __KUBE_FLAG_SHORT
+assert_parsed "tables unset: parser rebuilds them" --namespace=foo --output=name ::: -nfoo -oname
+
+
+### a shell that has the functions but none of the globals
+#
+# Copies what the snapshot does. One shell sources the plugin and prints its
+# functions. A clean shell defines only those functions and runs commands.
+
+functions -- ${(k)functions[(I)(kt|_kt|kubectl|__kube*)]} > $TMP/functions.zsh
+mkdir -p $TMP/home/.kube/configs
+touch $TMP/home/.kube/configs/alpha
+
+# Usage: fn_only <zsh code>
+# Runs the code in a clean zsh with only the plugin's functions; sets RC,
+# OUT and ERR.
+fn_only() {
+  rm -f $KUBE_STUB_LOG
+  HOME=$TMP/home zsh -f -c "source ${(q)TMP}/functions.zsh; $1" >$TMP/out 2>$TMP/err
+  RC=$?
+  OUT=$(<$TMP/out)
+  ERR=$(<$TMP/err)
+}
+
+fn_only 'kubectl -n ems logs pod-1 --previous --tail=50'
+assert_eq "functions only: kubectl exits 0" 0 $RC
+assert_eq "functions only: kubectl has no error" "" "$ERR"
+assert_ran "functions only: kubectl passes args through" -n ems logs pod-1 --previous --tail=50
+
+fn_only 'kubectl get crds'
+assert_ran "functions only: get finds the default template" get crds --output=custom-columns-file=$TPL/crds.tpl
+
+fn_only 'kt'
+assert_eq "functions only: kt lists the default config dirs" "  alpha" "$OUT"
+
+fn_only 'KUBE_CONFIG_DIRS=( /nonexistent ); kt'
+assert_eq "functions only: kt keeps a KUBE_CONFIG_DIRS that is set" "" "$OUT"
 
 
 ### flag lists match the installed kubectl
