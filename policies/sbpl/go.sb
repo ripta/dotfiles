@@ -27,6 +27,13 @@
        process-exec
        (regex "^/private/var/folders/[^/]+/[^/]+/T/go-build[0-9]+/"))
 
+;; Go on macOS checks TLS certificates through trustd. Without it, module
+;; downloads fail with "x509: OSStatus -26276". trustd fetches revocation
+;; status and missing intermediates itself, outside this sandbox and not
+;; through Squid. Data could leak in those fetches' URLs. That gap is
+;; accepted here for go.sb only.
+(allow mach-lookup (global-name "com.apple.trustd.agent"))
+
 ;; GOPATH (covers ~/go/bin, GOMODCACHE at ~/go/pkg/mod, sumdb)
 ;; and GOCACHE
 (allow file-read*
