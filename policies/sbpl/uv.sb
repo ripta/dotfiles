@@ -8,5 +8,11 @@
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/homebrew.sb"))
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/python-common.sb"))
 
+;; uv itself. /opt/homebrew/bin/uv is a symlink into the Cellar.
+(allow file-read*
+       file-map-executable
+       process-exec
+       (subpath "/opt/homebrew/Cellar/uv"))
+
 ;; Must stay last. See git-guard.sb.
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))
