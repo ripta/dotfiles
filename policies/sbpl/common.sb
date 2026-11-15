@@ -82,13 +82,32 @@
 ;; Full access to the project directory (passed via PROJECT_PATH parameter)
 (allow file-read* file-write* file-map-executable process-exec (project-subpath))
 
-;; Network: loopback (for the Squid proxy on 127.0.0.1:3128 — see
-;; policies/squid/) plus DNS, since some tools resolve before consulting
-;; HTTPS_PROXY. No other outbound egress is permitted; profiles that need
-;; the internet rely on the proxy via HTTPS_PROXY/HTTP_PROXY set by crated.
-(allow network* (remote ip "localhost:*"))
+;; Network: the Squid proxy on 127.0.0.1:3128 (see policies/squid/), plus
+;; DNS, since some tools resolve before consulting HTTPS_PROXY. No other
+;; outbound egress is permitted. Profiles that need the internet rely on
+;; the proxy via HTTPS_PROXY/HTTP_PROXY set by crated.
+(allow network-outbound (remote ip "localhost:3128"))
 (allow network-inbound (local ip))
 (allow network-outbound (remote udp "*:53") (remote tcp "*:53"))
+
+;; Wide loopback, for tests that start a local server and connect to it
+;; (Go httptest, Python test servers). Off by default. `crated --loopback`
+;; sets LOOPBACK, and claude.sb always calls it.
+;;
+;; Seatbelt has no port ranges, so test servers' random ports can't be
+;; allowed on their own. Instead, ports of local services that grant a lot
+;; of access stay denied: Docker 2375/2376, MySQL 3306, Postgres 5432,
+;; Redis 6379.
+(define (allow-wide-loopback)
+        (allow network* (remote ip "localhost:*"))
+        (deny network-outbound
+              (remote ip "localhost:2375")
+              (remote ip "localhost:2376")
+              (remote ip "localhost:3306")
+              (remote ip "localhost:5432")
+              (remote ip "localhost:6379")))
+
+(if (param "LOOPBACK") (allow-wide-loopback))
 
 ;; Process control.
 ;; lsopen is deliberately not allowed. Launch Services starts the target

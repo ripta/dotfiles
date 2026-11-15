@@ -44,5 +44,9 @@
        (global-name "com.apple.security.agent")
        (global-name "com.apple.securityd"))
 
+;; Claude's IDE integration, local HTTP MCP servers, and chrome-devtools
+;; all connect to loopback ports. See allow-wide-loopback in common.sb.
+(allow-wide-loopback)
+
 ;; Must stay last. See git-guard.sb.
 (import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))
