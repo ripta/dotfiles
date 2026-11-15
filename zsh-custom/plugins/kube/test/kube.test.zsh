@@ -133,6 +133,7 @@ assert_parsed "short boolean with = value"   --watch=false ::: -w=false
 assert_parsed "long boolean with = value"    --watch=false ::: --watch=false
 assert_parsed "global flag"                  --namespace=foo ::: -nfoo
 assert_parsed "global flag, long"            --context=prod ::: --context prod
+assert_parsed "kuberc takes a value"         --kuberc=prefs get pods ::: --kuberc prefs get pods
 assert_parsed "verbosity"                    --v=6 ::: -v 6
 
 assert_parsed "boolean does not take the next word" --show-kind name ::: --show-kind name

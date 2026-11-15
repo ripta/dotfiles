@@ -56,9 +56,10 @@ function __kube_init_flags {
   # kubectl flag that takes a value must be added here; test/kube.test.zsh
   # compares these lists against the installed kubectl.
   typeset -ga __KUBE_GLOBAL_FLAGS=(
-    as= as-group= as-uid= cache-dir= certificate-authority= client-certificate=
-    client-key= cluster= context= disable-compression help/h
-    insecure-skip-tls-verify kubeconfig= log-flush-frequency= match-server-version
+    as= as-group= as-uid= as-user-extra= cache-dir= certificate-authority=
+    client-certificate= client-key= cluster= context= disable-compression help/h
+    insecure-skip-tls-verify kubeconfig= kuberc= log-flush-frequency=
+    match-server-version
     namespace=/n password= profile= profile-output= request-timeout= server=/s
     tls-server-name= token= user= username= v=/v vmodule= warnings-as-errors
   )
