@@ -1,7 +1,26 @@
-typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
-typeset -g __KUBE_TEMPLATE_DIR=${${(%):-%x}:A:h}/templates
+# Prints the plugin's directory. The path is only known while this file is
+# being sourced, so it is written into the function body here. Some shells
+# copy functions but not global variables, such as the shell snapshot that
+# Claude Code's Bash tool replays. The function still works there.
+eval "function __kube_plugin_dir { print -r -- ${(q)${${(%):-%x}:A:h}} }"
+
+# Sets the plugin's global settings that are missing. Sourcing the plugin
+# calls it once. The functions that read the settings call it again, in case
+# the shell dropped them. A KUBE_CONFIG_DIRS that is already set is kept.
+function __kube_init_settings {
+  if (( ! ${+KUBE_CONFIG_DIRS} ))
+  then
+    typeset -ga KUBE_CONFIG_DIRS=( ~/.kube/configs ~/.ssh/kubeconfigs )
+  fi
+  if [[ -z $__KUBE_TEMPLATE_DIR ]]
+  then
+    typeset -g __KUBE_TEMPLATE_DIR=$(__kube_plugin_dir)/templates
+  fi
+}
+__kube_init_settings
 
 function kt {
+  __kube_init_settings
   local file=$1
   local dir cand
   if [[ -z "$file" ]]
@@ -278,6 +297,7 @@ function prompt_kube_plugin() {
 function __kubectl_get {
   # Without pipe_fail, a kubectl error piped into jq reports jq's success.
   setopt local_options pipe_fail
+  __kube_init_settings
 
   local -a __kube_args __kube_pos __kube_pos_arg
   __kube_parse_args global,get "$@"
@@ -396,6 +416,7 @@ function __kubectl_get {
 
 
 function _kt {
+  __kube_init_settings
   local -a configs
   local dir
   for dir in "${KUBE_CONFIG_DIRS[@]}"
