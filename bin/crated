@@ -5,12 +5,23 @@
 # Example: `crated claude` executes the command `claude` under the policy named
 #          `claude.sb` (see `policies/sbpl/` directory).
 
+sandbox_params=()
+if [[ "${1:-}" = "--loopback" ]]
+then
+  # Allow connections to any loopback port, e.g. for Go httptest.
+  # See allow-wide-loopback in policies/sbpl/common.sb.
+  sandbox_params+=(-D "LOOPBACK=1")
+  shift
+fi
+
 cmd_name="${1:-}"
 if [[ "${cmd_name}" = "" ]]
 then
-  echo "Usage: $0 <command> [args...]" 2>&1
+  echo "Usage: $0 [--loopback] <command> [args...]" 2>&1
   echo "" 2>&1
   echo "Execute a command under a seatbelt profile (named after the command)."
+  echo "--loopback allows connections to any loopback port, minus a few"
+  echo "service ports. Use it for tests that run a local server."
   exit 2
 fi
 
@@ -39,4 +50,4 @@ export NO_PROXY=localhost,127.0.0.1
 
 # Execute command
 echo "Activated profile '${profile_path}'" 2>&1
-exec sandbox-exec -f "${profile_path}" -D "HOME=${HOME}" -D "PROJECT_PATH=$(pwd)" "$@"
+exec sandbox-exec -f "${profile_path}" -D "HOME=${HOME}" -D "PROJECT_PATH=$(pwd)" "${sandbox_params[@]}" "$@"

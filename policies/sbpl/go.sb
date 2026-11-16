@@ -19,9 +19,27 @@
        (subpath "/opt/homebrew/Cellar/go")
        (subpath "/opt/homebrew/opt/go"))
 
+;; `go test` and `go run` build into $TMPDIR/go-build* and run from there.
+;; Go also opens $TMPDIR itself, which common.sb's regex doesn't match.
+(allow file-read*
+       (regex "^/private/var/folders/[^/]+/[^/]+/T$"))
+(allow file-map-executable
+       process-exec
+       (regex "^/private/var/folders/[^/]+/[^/]+/T/go-build[0-9]+/"))
+
+;; Go on macOS checks TLS certificates through trustd. Without it, module
+;; downloads fail with "x509: OSStatus -26276". trustd fetches revocation
+;; status and missing intermediates itself, outside this sandbox and not
+;; through Squid. Data could leak in those fetches' URLs. That gap is
+;; accepted here for go.sb only.
+(allow mach-lookup (global-name "com.apple.trustd.agent"))
+
 ;; GOPATH (covers ~/go/bin, GOMODCACHE at ~/go/pkg/mod, sumdb)
 ;; and GOCACHE
 (allow file-read*
        file-write*
        (home-subpath "/go")
        (home-subpath "/Library/Caches/go-build"))
+
+;; Must stay last. See git-guard.sb.
+(import (string-append (param "HOME") "/.dotfiles/policies/sbpl/git-guard.sb"))
