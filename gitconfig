@@ -285,10 +285,15 @@
     cmd = "vim -f $BASE $LOCAL $REMOTE $MERGED -c 'SpliceInit'"
     trustExitCode = true
 
-# Push the current branch to the upstream branch
+# Push the current branch to a same-named branch, even when the upstream is
+# origin/main; the upstream still drives ahead/behind and pull --rebase
 [push]
-    default = upstream          ; push current branch back to @{upstream}
+    default = current           ; push to a branch of the same name
     autoSetupRemote = true      ; assume --set-upstream when one doesn't exist
+
+# In forks, push to origin (the fork) even for branches tracking upstream/*
+[remote]
+    pushDefault = origin
 
 # Just-don't-even autostash before rebasing, but autosquash when in `rebase -i`
 [rebase]
