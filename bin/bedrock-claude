@@ -18,7 +18,7 @@
 #   }
 #
 # Account and region are parsed out of each ARN.
-# Picked main -> ANTHROPIC_MODEL; first matching sonnet/small_fast -> ANTHROPIC_DEFAULT_{SONNET,HAIKU}_MODEL.
+# Picked main -> ANTHROPIC_MODEL (and ANTHROPIC_DEFAULT_OPUS_MODEL if Opus); first matching sonnet/small_fast -> ANTHROPIC_DEFAULT_{SONNET,HAIKU}_MODEL.
 
 set -euo pipefail
 
@@ -87,11 +87,15 @@ first_arn_for_type() {
   done < <(jq -r --arg t "$1" '.modelsets[] | select(.type == $t) | .name' "${CONFIG}")
 }
 
+# Labels can be wrong; ask Bedrock which model the picked profile serves.
+main_model="$(aws bedrock get-inference-profile --region "${matched_region}" --inference-profile-identifier "${matched_arn}" --query 'models[0].modelArn' --output text 2>/dev/null || true)"
+
 sonnet_arn="$(first_arn_for_type sonnet)"
 haiku_arn="$(first_arn_for_type small_fast)"
 
 export CLAUDE_CODE_USE_BEDROCK=1
 export ANTHROPIC_MODEL="${matched_arn}"
+[[ "${main_model}" == *anthropic.claude-opus-* ]] && export ANTHROPIC_DEFAULT_OPUS_MODEL="${matched_arn}"
 export AWS_REGION="${matched_region}"
 [[ -n "${sonnet_arn}" ]] && export ANTHROPIC_DEFAULT_SONNET_MODEL="${sonnet_arn}"
 [[ -n "${haiku_arn}" ]] && export ANTHROPIC_DEFAULT_HAIKU_MODEL="${haiku_arn}"
