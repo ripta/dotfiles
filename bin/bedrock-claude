@@ -9,7 +9,7 @@
 #     "modelsets": [
 #       {
 #         "name": "...",
-#         "type": "main" | "small_fast",
+#         "type": "main" | "sonnet" | "small_fast",
 #         "profiles": [
 #           { "arn": "..." }
 #         ]
@@ -18,6 +18,7 @@
 #   }
 #
 # Account and region are parsed out of each ARN.
+# Picked main -> ANTHROPIC_MODEL; first matching sonnet/small_fast -> ANTHROPIC_DEFAULT_{SONNET,HAIKU}_MODEL.
 
 set -euo pipefail
 
@@ -67,24 +68,32 @@ main_match="$(match_arn_for_context "${main_arns[@]}")"
 [[ -n "${main_match}" ]] || die "no ARN in modelset '${selected_name}' matches account=${current_account}${current_region:+ region=${current_region}}"
 IFS=$'\t' read -r matched_arn matched_region <<<"${main_match}"
 
-# Find a small_fast modelset whose ARN matches the same account/region.
-# Silently skip if none — the user told us not to set it in that case.
-small_fast_arn=""
-while IFS= read -r small_name; do
-  [[ -n "${small_name}" ]] || continue
-  mapfile -t small_arns < <(
-    jq -r --arg n "${small_name}" '.modelsets[] | select(.name == $n) | .profiles[].arn' "${CONFIG}"
-  )
-  small_match="$(match_arn_for_context "${small_arns[@]}")"
-  if [[ -n "${small_match}" ]]; then
-    IFS=$'\t' read -r small_fast_arn _ <<<"${small_match}"
-    break
-  fi
-done < <(jq -r '.modelsets[] | select(.type == "small_fast") | .name' "${CONFIG}")
+# First ARN, across modelsets of type $1 in file order, matching the current context.
+first_arn_for_type() {
+  local set_name match arn
+  local -a arns
+  while IFS= read -r set_name; do
+    [[ -n "${set_name}" ]] || continue
+    mapfile -t arns < <(
+      jq -r --arg n "${set_name}" '.modelsets[] | select(.name == $n) | .profiles[].arn' "${CONFIG}"
+    )
+    [[ "${#arns[@]}" -gt 0 ]] || continue
+    match="$(match_arn_for_context "${arns[@]}")"
+    if [[ -n "${match}" ]]; then
+      IFS=$'\t' read -r arn _ <<<"${match}"
+      printf '%s\n' "${arn}"
+      return 0
+    fi
+  done < <(jq -r --arg t "$1" '.modelsets[] | select(.type == $t) | .name' "${CONFIG}")
+}
+
+sonnet_arn="$(first_arn_for_type sonnet)"
+haiku_arn="$(first_arn_for_type small_fast)"
 
 export CLAUDE_CODE_USE_BEDROCK=1
 export ANTHROPIC_MODEL="${matched_arn}"
 export AWS_REGION="${matched_region}"
-[[ -n "${small_fast_arn}" ]] && export ANTHROPIC_SMALL_FAST_MODEL="${small_fast_arn}"
+[[ -n "${sonnet_arn}" ]] && export ANTHROPIC_DEFAULT_SONNET_MODEL="${sonnet_arn}"
+[[ -n "${haiku_arn}" ]] && export ANTHROPIC_DEFAULT_HAIKU_MODEL="${haiku_arn}"
 
 exec claude "$@"
